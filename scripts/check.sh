@@ -5,6 +5,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+fixture_backup="$(mktemp -t trmnlp-fixture)"
 
 python3 scripts/gen_layouts.py --check
 ./bin/trmnlp lint
@@ -21,7 +22,7 @@ for layout in full half_horizontal half_vertical quadrant; do
     # A time grid, not a list: hour axis, one grid column per day, and
     # every timed event an absolutely positioned block.
     hours=$(grep -o 'data-hour=' "$out" | wc -l | tr -d ' ')
-    [ "$hours" -ge 6 ] || { echo "FAIL: $out has $hours hour labels, want >= 6"; exit 1; }
+    [ "$hours" -ge 4 ] || { echo "FAIL: $out has $hours hour labels, want >= 4"; exit 1; }
     cols=$(grep -o 'data-grid-col="[^"]*"' "$out" | sort)
     n=$(echo "$cols" | wc -l | tr -d ' ')
     [ "$n" -ge 2 ] || { echo "FAIL: $out rendered $n grid columns, want >= 2"; exit 1; }
@@ -90,4 +91,26 @@ done
 
 python3 scripts/geometry_check.py || exit 1
 
-echo "OK: lint clean, 4 layouts rendered from the .trmnlp.yml fixture"
+# Second pass: AXIS_MODE=day. The budget assertion is deliberately not
+# repeated - a 24-hour axis cannot fit a half-height panel at a legible
+# hour pitch, and the rule is to keep the range and clip at the bottom,
+# which align-self:flex-start on .cg-wrap guarantees.
+cp .trmnlp.yml "$fixture_backup"
+trap 'cp "$fixture_backup" .trmnlp.yml; rm -f "$fixture_backup"' EXIT
+sed -i '' 's/axis_mode: fit/axis_mode: day/' .trmnlp.yml
+./bin/trmnlp build >/dev/null
+for layout in full half_horizontal half_vertical quadrant; do
+    out="_build/${layout}.html"
+    grep -q 'data-axis-start="0" data-axis-end="24"' "$out" || {
+        echo "FAIL: $out did not honour AXIS_MODE=day"; exit 1; }
+done
+grep -q 'data-hour="0">12am' _build/full.html || { echo "FAIL: day axis does not start at 12am"; exit 1; }
+grep -q 'data-hour="23">11pm' _build/full.html || { echo "FAIL: day axis does not end at 11pm"; exit 1; }
+python3 scripts/geometry_check.py || exit 1
+
+cp "$fixture_backup" .trmnlp.yml
+rm -f "$fixture_backup"
+trap - EXIT
+./bin/trmnlp build >/dev/null
+
+echo "OK: lint clean, both axis modes rendered from the .trmnlp.yml fixture"

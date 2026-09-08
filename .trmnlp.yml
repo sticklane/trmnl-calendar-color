@@ -16,17 +16,19 @@ watch:
 
 time_zone: America/Chicago
 
-# Stands in for the plugin's custom fields on the site. Production reads
-# the same keynames, so the fixture exercises the real code path: the
-# markup's built-in CAL_MAP_DEFAULT is only the empty-field fallback.
-custom_fields:
+custom_fields: {}
+
+# The plugin's custom fields. On usetrmnl.com they arrive as top-level
+# Liquid variables named after their keyname (declared in src/settings.yml),
+# so they belong in `variables:` here - this trmnlp build does not forward
+# the separate `custom_fields:` block into the render scope.
+variables:
   cal_map: |
     you@gmail.com=black
     work@example.com=red
     shared@group.calendar.google.com=yellow
   default_color: white
-
-variables:
+  axis_mode: fit
   google_calendar_12345:
     instance_name: Calendar
     today_in_tz: '2026-09-07T00:00:00.000-05:00'

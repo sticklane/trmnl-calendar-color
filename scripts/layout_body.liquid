@@ -15,6 +15,8 @@
 " -%}
 {%- assign DEFAULT_COLOR = default_color | default: "" | strip -%}
 {%- if DEFAULT_COLOR == "" -%}{%- assign DEFAULT_COLOR = DEFAULT_COLOR_FALLBACK -%}{%- endif -%}
+{%- assign AXIS_MODE = axis_mode | default: "" | strip -%}
+{%- if AXIS_MODE != "day" and AXIS_MODE != "fit" -%}{%- assign AXIS_MODE = AXIS_MODE_FALLBACK -%}{%- endif -%}
 
 {%- assign events = src.events | sort: "start_full" -%}
 {%- assign names = src.calendar_names -%}
@@ -48,11 +50,14 @@
 {%- assign CAL_TEXTS = texts_s | split: "," -%}
 
 {%- comment -%}
-  Axis range: the tight window when every event in view fits inside it,
-  otherwise the native instance's scroll_time..scroll_time_end.
+  Axis range. `day` shows midnight to midnight. `fit` runs from the whole
+  hour BEFORE the earliest timed event in view to the whole hour AFTER the
+  latest one ends, each end rounded outward and clamped to the day
+  independently. All-day events never move it. An empty day falls back to
+  a working day so the grid still has an axis.
 {%- endcomment -%}
 {%- assign win_min = 9999 -%}
-{%- assign win_max = 0 -%}
+{%- assign win_max = -1 -%}
 {%- for ev in events -%}
   {%- if ev.all_day -%}{%- continue -%}{%- endif -%}
   {%- assign d = ev.start_full | split: "T" | first -%}
@@ -64,13 +69,24 @@
   {%- if s1 < win_min -%}{%- assign win_min = s1 -%}{%- endif -%}
   {%- if e1 > win_max -%}{%- assign win_max = e1 -%}{%- endif -%}
 {%- endfor -%}
-{%- assign TIGHT_S = TIGHT_START_H | times: 60 -%}
-{%- assign TIGHT_E = TIGHT_END_H | times: 60 -%}
-{%- assign GRID_START_H = WIDE_START_H -%}
-{%- assign GRID_END_H = WIDE_END_H -%}
-{%- if win_min >= TIGHT_S and win_max <= TIGHT_E -%}
-  {%- assign GRID_START_H = TIGHT_START_H -%}
-  {%- assign GRID_END_H = TIGHT_END_H -%}
+{%- assign GRID_START_H = 0 -%}
+{%- assign GRID_END_H = 24 -%}
+{%- if AXIS_MODE == "fit" -%}
+  {%- if win_max < 0 -%}
+    {%- assign GRID_START_H = EMPTY_START_H -%}
+    {%- assign GRID_END_H = EMPTY_END_H -%}
+  {%- else -%}
+    {%- assign sh = win_min | divided_by: 60 | minus: 1 -%}
+    {%- assign eh = win_max | divided_by: 60 -%}
+    {%- assign rem = win_max | modulo: 60 -%}
+    {%- if rem > 0 -%}{%- assign eh = eh | plus: 1 -%}{%- endif -%}
+    {%- assign eh = eh | plus: 1 -%}
+    {%- if sh < 0 -%}{%- assign sh = 0 -%}{%- endif -%}
+    {%- if eh > 24 -%}{%- assign eh = 24 -%}{%- endif -%}
+    {%- if eh <= sh -%}{%- assign eh = sh | plus: 1 -%}{%- endif -%}
+    {%- assign GRID_START_H = sh -%}
+    {%- assign GRID_END_H = eh -%}
+  {%- endif -%}
 {%- endif -%}
 {%- assign START_MIN = GRID_START_H | times: 60 -%}
 {%- assign END_MIN = GRID_END_H | times: 60 -%}
@@ -143,7 +159,7 @@
 
 <div class="view view--{{ VIEW }}">
   <div class="layout">
-    <div class="cg-wrap" data-grid-h="{{ GRID_H }}" data-hour-h="{{ HOUR_H }}" data-title-chars="{{ TITLE_CHARS }}" style="--cg-axis-w:{{ AXIS_W }}px;--cg-col-w:{{ COL_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px">
+    <div class="cg-wrap" data-grid-h="{{ GRID_H }}" data-hour-h="{{ HOUR_H }}" data-axis-mode="{{ AXIS_MODE }}" data-axis-start="{{ GRID_START_H }}" data-axis-end="{{ GRID_END_H }}" data-title-chars="{{ TITLE_CHARS }}" style="--cg-axis-w:{{ AXIS_W }}px;--cg-col-w:{{ COL_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px">
 
       {%- comment -%} ---------- day header row ---------- {%- endcomment -%}
       <div class="cg-row cg-row--head">

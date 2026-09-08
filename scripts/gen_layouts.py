@@ -22,10 +22,9 @@ SHARED = """{%- assign src = google_calendar_12345 -%}
 {%- assign MARK_WEEKENDS = true -%}
 {%- assign DAY_FMT = "%a %-m/%-d" -%}
 {%- assign HEAD_SIZE = "small" -%}
-{%- assign TIGHT_START_H = 6 -%}
-{%- assign TIGHT_END_H = 22 -%}
-{%- assign WIDE_START_H = 5 -%}
-{%- assign WIDE_END_H = 23 -%}
+{%- assign AXIS_MODE_FALLBACK = "fit" -%}
+{%- assign EMPTY_START_H = 8 -%}
+{%- assign EMPTY_END_H = 18 -%}
 {%- assign HOUR_H_MIN = 9 -%}
 {%- assign LINE_H = 12 -%}
 {%- assign BLOCK_GAP = 1 -%}

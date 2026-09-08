@@ -9,7 +9,8 @@ import html, pathlib, re, sys, yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 FIX = yaml.safe_load((ROOT / '.trmnlp.yml').read_text())
-NODE = next(iter(FIX['variables'].values()))
+NODE = next(v for v in FIX['variables'].values()
+            if isinstance(v, dict) and 'events' in v)
 EVENTS = NODE['events']
 TODAY = NODE['today_in_tz'].split('T')[0]
 
@@ -23,6 +24,27 @@ def flat(s):
     return re.sub(r'\s+', ' ', html.unescape(s).replace('&nbsp;', ' ')).strip()
 
 fail = []
+
+
+def minutes(t):
+    hh, mm = t.split('T')[1][:5].split(':')
+    return int(hh) * 60 + int(mm)
+
+
+def axis_range(mode, window):
+    """What AXIS_MODE should have produced for this window."""
+    if mode == 'day':
+        return (0, 24)
+    lo, hi = 9999, -1
+    for ev in EVENTS:
+        if ev.get('all_day') or ev['start_full'].split('T')[0] not in window:
+            continue
+        s = minutes(ev['start_full'])
+        e = minutes(ev['end_full']) if ev.get('end_full') else s + 60
+        lo, hi = min(lo, s), max(hi, e)
+    if hi < 0:
+        return (8, 18)
+    return (max(0, lo // 60 - 1), min(24, -(-hi // 60) + 1))
 
 
 def truncate(s, n):
@@ -43,6 +65,20 @@ for f in sorted((ROOT / '_build').glob('*.html')):
     for L in re.findall(r'data-hour="\d+">([^<]*)</span>', h) or ['']:
         if not re.fullmatch(r'\d{1,2}(am|pm)', L.strip()):
             fail.append(f'{name}: clipped or odd hour label {L!r}')
+
+    window = set(re.findall(r'data-grid-col="([\d-]+)"', h))
+    mode = re.search(r'data-axis-mode="(\w+)"', h).group(1)
+    got = (int(re.search(r'data-axis-start="(\d+)"', h).group(1)),
+           int(re.search(r'data-axis-end="(\d+)"', h).group(1)))
+    want = axis_range(mode, window)
+    if got != want:
+        fail.append(f'{name}: axis_mode {mode} gave hours {got}, expected {want}')
+    hours = sorted(int(x) for x in re.findall(r'data-hour="(\d+)"', h))
+    every = hours[1] - hours[0] if len(hours) > 1 else 1
+    if hours and hours[0] != want[0]:
+        fail.append(f'{name}: first hour label {hours[0]}, expected {want[0]}')
+    if hours and not 0 <= want[1] - 1 - hours[-1] < every:
+        fail.append(f'{name}: last hour label {hours[-1]} does not reach {want[1] - 1}')
 
     drawn, more_total = set(), 0
     cols = re.split(r'<div class="cg-col[^"]*" data-grid-col="', h)[1:]
@@ -79,7 +115,6 @@ for f in sorted((ROOT / '_build').glob('*.html')):
 
     # Every timed fixture event inside the window is either drawn in full
     # or counted into a "+N more".
-    window = set(re.findall(r'data-grid-col="([\d-]+)"', h))
     missing = []
     for ev in EVENTS:
         if ev.get('all_day') or 'should not render' in ev['summary']:

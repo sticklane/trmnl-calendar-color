@@ -16,3 +16,42 @@ framework_version: latest
 name: Calendar Color
 description: Calendar events by source color
 refresh_interval: 900
+
+# Custom fields. On usetrmnl.com these render as the plugin's own
+# settings form; trmnlp only forwards a value from .trmnlp.yml's
+# `custom_fields:` when the keyname is declared here. Keynames become
+# top-level Liquid variables, so the markup reads {{ cal_map }},
+# {{ default_color }} and {{ axis_mode }}.
+custom_fields:
+  - keyname: cal_map
+    field_type: text
+    name: Calendar colors
+    description: >-
+      One calendar-id=color per line, e.g. you@gmail.com=black. Ids are the
+      calname values in the merge variable. On the B/W/R/Y panel only black,
+      red, yellow and white print solid; grey steps are for 1-bit panels.
+    placeholder: |
+      you@gmail.com=black
+      work@example.com=red
+      shared@group.calendar.google.com=yellow
+    optional: true
+  - keyname: default_color
+    field_type: select
+    name: Default color
+    description: Fill for any calendar not listed above.
+    options:
+      - black
+      - red
+      - yellow
+      - white
+    optional: true
+  - keyname: axis_mode
+    field_type: select
+    name: Hour axis
+    description: >-
+      "fit" runs from an hour before the first event to an hour after the
+      last one ends. "day" always shows midnight to midnight.
+    options:
+      - fit
+      - day
+    optional: true
