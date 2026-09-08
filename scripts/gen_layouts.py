@@ -33,10 +33,10 @@ SHARED = """{%- assign src = google_calendar_12345 -%}
 
 LAYOUTS = {
     # view              days panelW axis panelH head (unused) hmax every one_line title legend maxblock
-    'full':            (3, 780, 39, 460, 24, 44, 24, 1, 36, 35, 'true', 38),
-    'half_horizontal': (3, 780, 39, 220, 20, 36, 16, 3, 36, 35, 'true', 26),
-    'half_vertical':   (2, 380, 40, 460, 24, 44, 22, 2, 24, 23, 'false', 38),
-    'quadrant':        (2, 380, 34, 220, 20, 36, 15, 3, 25, 24, 'false', 26),
+    'full':            (3, 780, 39, 460, 18, 44, 24, 1, 36, 35, 'true', 38),
+    'half_horizontal': (3, 780, 39, 220, 18, 36, 16, 3, 36, 35, 'true', 26),
+    'half_vertical':   (2, 380, 40, 460, 18, 44, 22, 2, 24, 23, 'false', 38),
+    'quadrant':        (2, 380, 34, 220, 18, 36, 15, 3, 25, 24, 'false', 26),
 }
 
 HEAD = """{%- comment -%}
@@ -79,7 +79,7 @@ KNOBS = """{%- comment -%} ---- this layout ---- {%- endcomment -%}
 {%- assign AXIS_W = @AXIS@ -%}           {%- comment -%} chosen so (PANEL_W - AXIS_W) / NUM_DAYS is exact {%- endcomment -%}
 {%- assign PANEL_H = @PANELH@ -%}        {%- comment -%} USABLE height, same inset. The grid gets what the day
                                             headers, the all-day band and the legend leave of it {%- endcomment -%}
-{%- assign HEAD_H = @HEADH@ -%}          {%- comment -%} day-header row {%- endcomment -%}
+{%- assign HEAD_H = @HEADH@ -%}          {%- comment -%} day-header row, measured in the rendered preview {%- endcomment -%}
 {%- assign HOUR_H_MAX = @HMAX@ -%}         {%- comment -%} px per hour ceiling {%- endcomment -%}
 {%- assign HOUR_EVERY = @EVERY@ -%}         {%- comment -%} label every Nth hour {%- endcomment -%}
 {%- assign ONE_LINE_CHARS = @ONELINE@ -%}   {%- comment -%} "start - end  Title" that fits the column on one line {%- endcomment -%}

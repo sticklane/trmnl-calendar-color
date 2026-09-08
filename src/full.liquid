@@ -57,7 +57,7 @@
 {%- assign AXIS_W = 39 -%}           {%- comment -%} chosen so (PANEL_W - AXIS_W) / NUM_DAYS is exact {%- endcomment -%}
 {%- assign PANEL_H = 460 -%}        {%- comment -%} USABLE height, same inset. The grid gets what the day
                                             headers, the all-day band and the legend leave of it {%- endcomment -%}
-{%- assign HEAD_H = 24 -%}          {%- comment -%} day-header row {%- endcomment -%}
+{%- assign HEAD_H = 18 -%}          {%- comment -%} day-header row, measured in the rendered preview {%- endcomment -%}
 {%- assign HOUR_H_MAX = 24 -%}         {%- comment -%} px per hour ceiling {%- endcomment -%}
 {%- assign HOUR_EVERY = 1 -%}         {%- comment -%} label every Nth hour {%- endcomment -%}
 {%- assign ONE_LINE_CHARS = 36 -%}   {%- comment -%} "start - end  Title" that fits the column on one line {%- endcomment -%}
@@ -176,7 +176,9 @@
 {%- comment -%}
   The all-day band is as tall as the busiest day in view, and it eats the
   grid's budget. Measure it before sizing the hour, or a three-entry band
-  pushes the last hours of the day off the bottom of the panel.
+  pushes the last hours of the day off the bottom of the panel. The extra
+  ten pixels are the band's two dashed rules and its inner spacing,
+  measured in the rendered preview.
 {%- endcomment -%}
 {%- assign AD_MAX = 0 -%}
 {%- if SHOW_ALLDAY -%}
@@ -198,7 +200,7 @@
   {%- endfor -%}
 {%- endif -%}
 {%- assign AD_H = 0 -%}
-{%- if AD_MAX > 0 -%}{%- assign AD_H = LINE_H | plus: 2 | times: AD_MAX | plus: 4 -%}{%- endif -%}
+{%- if AD_MAX > 0 -%}{%- assign AD_H = LINE_H | plus: 2 | times: AD_MAX | plus: 10 -%}{%- endif -%}
 {%- comment -%}
   The framework title bar is ~44px of chrome for a name and an icon. The
   legend replaces it with one 12px line of swatches and calendar names,
@@ -288,7 +290,7 @@
   .cg-swatch { display: inline-block; width: 8px; height: 8px; }
   .cg-legend { align-items: center; height: var(--cg-legend-h); }
   /* The window-end label, pulled back inside the grid by one line. */
-  .cg-hour--end { position: relative; top: calc(0px - var(--cg-line-h)); }
+  .cg-hour--end { position: relative; top: calc(0px - var(--cg-line-h)); height: 0; }
 </style>
 
 <div class="view view--{{ VIEW }}">
