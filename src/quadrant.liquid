@@ -273,7 +273,7 @@
             lane's end. Only MAX_LANES lanes are drawn; the rest are
             counted into the cluster's "+N" marker.
 
-            recs entries are "index:lane:texty", clusters are
+            recs entries are "index:lane:texty:cluster", clusters are
             "cluster:lanes:overflow:top".
           {%- endcomment -%}
           {%- assign recs = "" -%}
@@ -397,7 +397,6 @@
               {%- endfor -%}
               {%- unless seen -%}{%- continue -%}{%- endunless -%}
               {%- if lane < 0 -%}{%- continue -%}{%- endif -%}
-
 
               {%- assign tb = ev.start_full | split: "T" | last | split: ":" -%}
               {%- assign s1 = tb[0] | times: 60 | plus: tb[1] -%}
