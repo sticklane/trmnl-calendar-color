@@ -27,11 +27,14 @@ pasting each `src/*.liquid` into its markup tab on the site.
 ## Verify against the renderer, not just the linter
 
 `trmnlp lint` checks TRMNL best practices; it does not prove the Liquid
-produced anything. `scripts/check.sh` also greps the built HTML for
-render errors and for at least one day header, because a Liquid failure
-in trmnlp renders as body text with a zero exit code. Keep that assertion
-in step with the template — if day headers stop being the reliable
-marker, assert on whatever replaces them.
+produced anything. `scripts/check.sh` also greps the built HTML, because a Liquid failure in
+trmnlp renders as body text with a zero exit code. It asserts the day
+window (one column per day, today present and highlighted, the day math
+actually advancing), that nothing outside the window leaks in, and that a
+multi-day all-day event repeats across the days it covers. Keep those
+assertions in step with the template; the fixture carries a deliberate
+"should not render" event on either side of the window, so widening
+`NUM_DAYS` without thinking fails the check.
 
 ## Color tokens
 

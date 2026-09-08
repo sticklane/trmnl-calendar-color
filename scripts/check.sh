@@ -17,15 +17,26 @@ for layout in full half_horizontal half_vertical quadrant; do
         grep -o 'invalid JSON in static_data\|Liquid[^<]*' "$out" | head -3
         exit 1
     fi
-    grep -q 'group-header' "$out" || { echo "FAIL: $out rendered no day headers"; exit 1; }
+    # One column per day in the window, today first, no duplicates.
+    cols=$(grep -o 'data-day-col="[^"]*"' "$out" | sort)
+    n=$(echo "$cols" | wc -l | tr -d ' ')
+    [ "$n" -ge 2 ] || { echo "FAIL: $out rendered $n day columns, want >= 2"; exit 1; }
+    [ "$(echo "$cols" | uniq | wc -l | tr -d ' ')" = "$n" ] || { echo "FAIL: $out repeats a day column"; exit 1; }
+    grep -q 'data-day-col="2026-09-07"' "$out" || { echo "FAIL: $out has no column for today"; exit 1; }
+    grep -q 'label--filled" data-day-header' "$out" || { echo "FAIL: $out does not highlight today"; exit 1; }
+
     # today_in_tz arrives as a full ISO timestamp from the live merge
-    # variable, so the day-key comparison has to normalize it. Without
-    # that, the Today highlight silently never fires.
-    grep -q 'Today ·' "$out" || { echo "FAIL: $out rendered no Today header"; exit 1; }
-    # The live merge variable does NOT hand back a sorted array, despite
-    # the README's assumption, so each day must still appear exactly once.
-    dupes=$(grep -o 'data-group-header="true">[^<]*' "$out" | sort | uniq -d)
-    [ -z "$dupes" ] || { echo "FAIL: $out repeats a day header: $dupes"; exit 1; }
+    # variable, so the day key has to be normalized before any date math.
+    grep -q 'data-day-col="2026-09-08"' "$out" || { echo "FAIL: $out day math did not advance a day"; exit 1; }
+
+    # The window is today..today+N. Anything outside it must not render.
+    if grep -q 'should not render' "$out"; then
+        echo "FAIL: $out shows an event outside the day window"; exit 1
+    fi
+
+    # A multi-day all-day event has to repeat in every day it covers,
+    # and all-day rows lead their column.
+    [ "$(grep -c "Cousin Pam" "$out")" -ge 2 ] || { echo "FAIL: $out does not span a multi-day all-day event"; exit 1; }
 done
 
 echo "OK: lint clean, 4 layouts rendered from the .trmnlp.yml fixture"

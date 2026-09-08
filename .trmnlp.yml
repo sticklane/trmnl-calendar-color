@@ -27,6 +27,14 @@ variables:
       work@google.com: Work
       abc123@group.calendar.google.com: Family
     events:
+      - summary: Cousin Pam's
+        description: ''
+        calname: abc123@group.calendar.google.com
+        all_day: true
+        start: ''
+        end: ''
+        start_full: '2026-09-02'
+        end_full: '2026-09-10'
       - summary: Trash day
         description: ''
         calname: abc123@group.calendar.google.com
@@ -34,45 +42,60 @@ variables:
         start: ''
         end: ''
         start_full: '2026-09-08'
+        end_full: '2026-09-09'
       - summary: Standup
         description: Daily sync
         calname: work@google.com
         all_day: false
-        start: 9:00am
-        end: 9:15am
+        start: 9:00 AM
+        end: 9:15 AM
         start_full: '2026-09-07T09:00:00-05:00'
       - summary: Dentist
         description: Cleaning, 2nd floor
         calname: you@gmail.com
         all_day: false
-        start: 11:30am
-        end: 12:30pm
+        start: 11:30 AM
+        end: 12:30 PM
         start_full: '2026-09-07T11:30:00-05:00'
       - summary: Soccer practice
         description: ''
         calname: abc123@group.calendar.google.com
         all_day: false
-        start: 4:00pm
-        end: 5:30pm
+        start: 4:00 PM
+        end: 5:30 PM
         start_full: '2026-09-07T16:00:00-05:00'
       - summary: Quarterly planning review
         description: Bring the roadmap deck
         calname: work@google.com
         all_day: false
-        start: 10:00am
-        end: 11:30am
+        start: 10:00 AM
+        end: 11:30 AM
         start_full: '2026-09-08T10:00:00-05:00'
       - summary: Dinner with Sam
         description: ''
         calname: you@gmail.com
         all_day: false
-        start: 7:00pm
-        end: 9:00pm
+        start: 7:00 PM
+        end: 9:00 PM
         start_full: '2026-09-09T19:00:00-05:00'
       - summary: Unlisted calendar event
         description: Exercises the FALLBACK token cycle
         calname: other@example.com
         all_day: false
-        start: 2:00pm
-        end: 3:00pm
-        start_full: '2026-09-10T14:00:00-05:00'
+        start: 2:00 PM
+        end: 3:00 PM
+        start_full: '2026-09-09T14:00:00-05:00'
+      - summary: PAST should not render
+        description: ''
+        calname: you@gmail.com
+        all_day: false
+        start: 8:00 AM
+        end: 9:00 AM
+        start_full: '2026-09-05T08:00:00-05:00'
+      - summary: FUTURE should not render
+        description: ''
+        calname: you@gmail.com
+        all_day: false
+        start: 8:00 AM
+        end: 9:00 AM
+        start_full: '2026-09-14T08:00:00-05:00'

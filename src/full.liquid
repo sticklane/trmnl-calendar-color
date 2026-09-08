@@ -2,6 +2,8 @@
 =====================================================================
  Google Calendar fork — per-calendar color coding (TRMNL Plugin Merge)
  Layout: FULL (800x480 / TRMNL X scales)
+ View:   3-day week — one column per day, matching the native plugin's
+         "3 Day Week" event layout rather than a day-grouped agenda.
 =====================================================================
  SETUP
    1. Connect Google Calendar natively, pick your calendars, hide it in Playlists.
@@ -9,7 +11,7 @@
    3. Open the "Merge Variables" dropdown, find your node, e.g.
       google_calendar_12345 -> replace the placeholder below.
    4. Fill CAL_MAP with calendar-id=token pairs. Calendar ids are the
-      `calname` values in the JSON (usually the calendar's email/id).
+      'calname' values in the JSON (usually the calendar's email/id).
       Any calendar you don't list falls back to the FALLBACK cycle.
 
  TOKENS (framework v3): black, gray-10..gray-75 (steps of 5), white,
@@ -17,6 +19,10 @@
    or hue-step like blue-40. On 1-bit + TRMNL X grayscale panels,
    hues collapse to their lightness -> keep grays FAR apart
    (black / gray-30 / gray-50 / gray-65) and use glyphs too.
+
+ Event times come straight from ev.start / ev.end, which the native
+ plugin has already formatted with its own time_format setting, so the
+ clock style always matches the native instance without a knob here.
 =====================================================================
 {%- endcomment -%}
 
@@ -24,22 +30,25 @@
 {%- assign CAL_MAP = "you@gmail.com=black,work@google.com=gray-40,abc123@group.calendar.google.com=gray-65" | split: "," -%}
 {%- assign FALLBACK = "black,gray-40,gray-65,gray-25,gray-55" | split: "," -%}
 {%- assign GLYPHS = "■,●,▲,◆,★,▼,♦,✚" | split: "," -%}
-{%- assign MODE = "both" -%}            {%- comment -%} bar | glyph | both | fill {%- endcomment -%}
+{%- assign MODE = "both" -%}            {%- comment -%} bar | glyph | both {%- endcomment -%}
 {%- assign SHOW_LEGEND = true -%}
 {%- assign SHOW_TIME = true -%}
-{%- assign SHOW_DESC = false -%}
-{%- assign DAY_FMT = "%A, %B %-d" -%}
+{%- assign SHOW_DESC = true -%}
+{%- assign NUM_DAYS = 3 -%}           {%- comment -%} day columns, starting today {%- endcomment -%}
+{%- assign DAY_FMT = "%a %-m/%-d" -%} {%- comment -%} localized short, e.g. Mon 9/8 {%- endcomment -%}
+{%- assign HIGHLIGHT_TODAY = true -%}
+{%- assign SHADE_WEEKENDS = true -%}
+{%- assign MAX_PER_DAY = 0 -%}        {%- comment -%} 0 = uncapped {%- endcomment -%}
 {%- assign VIEW = "full" -%}          {%- comment -%} full | half_horizontal | half_vertical | quadrant {%- endcomment -%}
-{%- assign MAX_DAYS = 0 -%}           {%- comment -%} 0 = no cap; quadrant/half use 1-3 {%- endcomment -%}
-{%- assign MAX_COLS = 3 -%}
-{%- assign HEAD_SIZE = "medium" -%}
-{%- assign BAR_WIDTH = 12 -%}        {%- comment -%} px. OG 1-bit: keep >= 12 so dither patterns read; X: 6-8 is fine {%- endcomment -%}
+{%- assign HEAD_SIZE = "small" -%}
 {%- assign TITLE_SIZE = "small" -%}
+{%- assign BAR_WIDTH = 8 -%}          {%- comment -%} px. OG 1-bit: keep >= 12 so dither patterns read {%- endcomment -%}
 
 {%- comment -%} ---- derived: resolve one token + glyph per calendar, once ---- {%- endcomment -%}
 {%- assign events = src.events | sort: "start_full" -%}
 {%- assign names = src.calendar_names -%}
 {%- assign today = src.today_in_tz | split: "T" | first -%}
+{%- assign today_ts = today | date: "%s" | times: 1 -%}
 {%- assign cals = events | map: "calname" | uniq -%}
 
 {%- assign mapped = "" -%}
@@ -61,84 +70,94 @@
 
 <div class="view view--{{ VIEW }}">
   <div class="layout">
-    <div class="columns" data-overflow-max-cols="{{ MAX_COLS }}" data-overflow-counter="true">
-      <div class="column">
-        {%- assign prev_day = "" -%}
-        {%- assign idx = 0 -%}
-        {%- assign day_count = 0 -%}
-        {%- for ev in events -%}
-          {%- assign day_key = ev.start_full | date: "%Y-%m-%d" -%}
-          {%- if day_key != prev_day -%}{%- assign day_count = day_count | plus: 1 -%}{%- endif -%}
-          {%- if MAX_DAYS > 0 and day_count > MAX_DAYS -%}{%- break -%}{%- endif -%}
+    <div class="columns">
+      {%- for n in (1..NUM_DAYS) -%}
+        {%- assign offset = n | minus: 1 | times: 86400 -%}
+        {%- assign day_ts = today_ts | plus: offset -%}
+        {%- assign day_key = day_ts | date: "%Y-%m-%d" -%}
+        {%- assign day_label = day_ts | date: DAY_FMT -%}
+        {%- assign dow = day_ts | date: "%w" -%}
+        {%- assign weekend = false -%}
+        {%- if dow == "0" or dow == "6" -%}{%- assign weekend = true -%}{%- endif -%}
 
-          {%- comment -%} look up this event's calendar {%- endcomment -%}
-          {%- assign ci = 0 -%}
-          {%- for c in cals -%}{%- if c == ev.calname -%}{%- assign ci = forloop.index0 -%}{%- break -%}{%- endif -%}{%- endfor -%}
-          {%- assign token = CAL_TOKENS[ci] -%}
-          {%- assign gi = ci | modulo: GLYPHS.size -%}
-          {%- assign glyph = GLYPHS[gi] -%}
-
-          {%- comment -%} day header {%- endcomment -%}
-          {%- if day_key != prev_day -%}
-            {%- assign day_label = ev.start_full | date: DAY_FMT -%}
-            {%- if day_key == today -%}
-              <span class="label label--{{ HEAD_SIZE }} label--filled group-header" data-group-header="true">Today · {{ day_label }}</span>
-            {%- else -%}
-              <span class="label label--{{ HEAD_SIZE }} group-header" data-group-header="true">{{ day_label }}</span>
-            {%- endif -%}
-            {%- assign prev_day = day_key -%}
+        <div class="column" data-day-col="{{ day_key }}">
+          {%- if day_key == today and HIGHLIGHT_TODAY -%}
+            <span class="label label--{{ HEAD_SIZE }} label--filled" data-day-header="true">{{ day_label }}</span>
+          {%- elsif weekend and SHADE_WEEKENDS -%}
+            <span class="label label--{{ HEAD_SIZE }} label--underline text--gray-45" data-day-header="true">{{ day_label }}</span>
+          {%- else -%}
+            <span class="label label--{{ HEAD_SIZE }}" data-day-header="true">{{ day_label }}</span>
           {%- endif -%}
 
-          {%- comment -%} event row {%- endcomment -%}
-          {%- if MODE == "fill" -%}
-            <div class="item bg--{{ token }} rounded--small" style="padding:4px 8px">
-              <div class="content">
-                <span class="title title--small" data-clamp="1">{{ glyph }} {{ ev.summary }}</span>
-                {%- if SHOW_TIME and ev.all_day != true -%}
-                  <span class="label label--small">{{ ev.start }} – {{ ev.end }}</span>
-                {%- elsif ev.all_day -%}
-                  <span class="label label--small">All day</span>
+          {%- comment -%}
+            All-day rows lead the column. A bare YYYY-MM-DD start_full
+            sorts ahead of the same day's timed events, so the global
+            sort already puts them first; this pass just keeps them
+            grouped when a multi-day event started on an earlier day.
+          {%- endcomment -%}
+          {%- assign shown = 0 -%}
+          {%- for pass in (1..2) -%}
+            {%- for ev in events -%}
+              {%- if MAX_PER_DAY > 0 and shown >= MAX_PER_DAY -%}{%- break -%}{%- endif -%}
+              {%- if pass == 1 and ev.all_day != true -%}{%- continue -%}{%- endif -%}
+              {%- if pass == 2 and ev.all_day -%}{%- continue -%}{%- endif -%}
+
+              {%- assign ev_start_day = ev.start_full | split: "T" | first -%}
+              {%- assign on_day = false -%}
+              {%- if ev.all_day -%}
+                {%- comment -%}
+                  Google's all-day end date is exclusive, so a one-day
+                  event has end == start + 1. Treat a missing or
+                  non-advancing end as a single day rather than dropping
+                  the event entirely.
+                {%- endcomment -%}
+                {%- assign ev_end_day = ev.end_full | split: "T" | first -%}
+                {%- if ev_end_day == blank or ev_end_day <= ev_start_day -%}
+                  {%- if day_key == ev_start_day -%}{%- assign on_day = true -%}{%- endif -%}
+                {%- elsif day_key >= ev_start_day and day_key < ev_end_day -%}
+                  {%- assign on_day = true -%}
                 {%- endif -%}
-              </div>
-            </div>
-          {%- else -%}
-            <div class="item">
-              {%- if MODE == "bar" or MODE == "both" -%}
-                <div class="bg--{{ token }} rounded--small" style="width:{{ BAR_WIDTH }}px;align-self:stretch;flex-shrink:0"></div>
+              {%- elsif day_key == ev_start_day -%}
+                {%- assign on_day = true -%}
               {%- endif -%}
-              <div class="meta">
+              {%- unless on_day -%}{%- continue -%}{%- endunless -%}
+
+              {%- assign ci = 0 -%}
+              {%- for c in cals -%}{%- if c == ev.calname -%}{%- assign ci = forloop.index0 -%}{%- break -%}{%- endif -%}{%- endfor -%}
+              {%- assign token = CAL_TOKENS[ci] -%}
+              {%- assign gi = ci | modulo: GLYPHS.size -%}
+              {%- assign glyph = GLYPHS[gi] -%}
+              {%- assign shown = shown | plus: 1 -%}
+
+              <div class="item" data-event="true">
+                {%- if MODE == "bar" or MODE == "both" -%}
+                  <div class="bg--{{ token }} rounded--small" style="width:{{ BAR_WIDTH }}px;align-self:stretch;flex-shrink:0"></div>
+                {%- endif -%}
                 {%- if MODE == "glyph" or MODE == "both" -%}
-                  <span class="index text--{{ token }}">{{ glyph }}</span>
-                {%- else -%}
-                  {%- assign idx = idx | plus: 1 -%}
-                  <span class="index">{{ idx }}</span>
+                  <div class="meta"><span class="index text--{{ token }}">{{ glyph }}</span></div>
                 {%- endif -%}
-              </div>
-              <div class="content">
-                <span class="title title--{{ TITLE_SIZE }}" data-clamp="2">{{ ev.summary }}</span>
-                {%- if SHOW_DESC and ev.description != blank -%}
-                  <span class="description" data-clamp="1">{{ ev.description }}</span>
-                {%- endif -%}
-                {%- if SHOW_TIME -%}
-                  <div class="flex gap--xsmall">
+                <div class="content">
+                  <span class="title title--{{ TITLE_SIZE }}" data-clamp="2">{{ ev.summary }}</span>
+                  {%- if SHOW_TIME -%}
                     {%- if ev.all_day -%}
                       <span class="label label--small label--underline">All day</span>
                     {%- else -%}
                       <span class="label label--small label--underline">{{ ev.start }} – {{ ev.end }}</span>
                     {%- endif -%}
-                  </div>
-                {%- endif -%}
+                  {%- endif -%}
+                  {%- if SHOW_DESC and ev.description != blank -%}
+                    <span class="description" data-clamp="1">{{ ev.description }}</span>
+                  {%- endif -%}
+                </div>
               </div>
-            </div>
-          {%- endif -%}
-        {%- endfor -%}
+            {%- endfor -%}
+          {%- endfor -%}
 
-        {%- if events.size == 0 -%}
-          <div class="layout layout--center layout--middle h--full">
-            <span class="title text--gray-50">No upcoming events</span>
-          </div>
-        {%- endif -%}
-      </div>
+          {%- if shown == 0 -%}
+            <span class="label label--small text--gray-45">—</span>
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
     </div>
   </div>
 
