@@ -3,9 +3,10 @@
  Google Calendar fork — per-calendar color coding (TRMNL Plugin Merge)
  Layout: QUADRANT
  View:   3 Day Week TIME GRID — hours down the left axis, one column
-         per day, every timed event a block positioned by start time
-         and sized by duration. Mirrors the native plugin's
-         "3 Day Week" layout, not an agenda list.
+         per day, every timed event a SOLID FILLED block spanning its
+         duration with the time and title inside it, filled in the
+         source calendar's colour. Overlapping blocks cascade to the
+         right and overlay each other, as the native render does.
 =====================================================================
  SETUP
    1. Connect Google Calendar natively, pick your calendars, hide it in Playlists.
@@ -41,21 +42,23 @@
 {%- assign TIGHT_END_H = 22 -%}
 {%- assign WIDE_START_H = 5 -%}       {%- comment -%} native scroll_time 05:00 {%- endcomment -%}
 {%- assign WIDE_END_H = 23 -%}        {%- comment -%} native scroll_time_end 23:00 {%- endcomment -%}
-{%- assign GRID_TARGET_H = 104 -%}    {%- comment -%} px budget for the grid body. HOUR_H and the real
-                                          GRID_H are derived from it so the hour rules, the axis cells
-                                          and the block maths all sit on one integer scale. {%- endcomment -%}
 {%- assign HOUR_EVERY = 3 -%}         {%- comment -%} label every Nth hour {%- endcomment -%}
 {%- assign AXIS_W = 34 -%}       {%- comment -%} fits "12pm" at the label font {%- endcomment -%}
-{%- assign MIN_BAR_H = 1 -%}          {%- comment -%} bars stay exact: clamping one taller than its
-                                          duration makes back-to-back events overlap {%- endcomment -%}
-{%- assign LINE_H = 11 -%}            {%- comment -%} one text entry line {%- endcomment -%}
-{%- assign MAX_LANES = 1 -%}          {%- comment -%} more than 2 lanes cannot hold readable text {%- endcomment -%}
+{%- assign LIGHT_TOKENS = "white,yellow,lime,cyan,gray-10,gray-15,gray-20,gray-25,gray-30,gray-35,gray-40,gray-45" | split: "," -%}
+                                      {%- comment -%} fills that need dark text. Mid greys dither on a
+                                          1-bit panel, where white text disappears into the pattern. {%- endcomment -%}
+{%- assign LINE_H = 12 -%}            {%- comment -%} one line of block text {%- endcomment -%}
+{%- assign HOUR_H = 15 -%}            {%- comment -%} px per hour. Two lines per hour, so a 30-minute
+                                          block still clears one line of text. {%- endcomment -%}
+{%- assign LANE_OFFSET = 22 -%}       {%- comment -%} % each lane is nudged right; blocks overlay rather
+                                          than divide the width, the way the native render does {%- endcomment -%}
+{%- assign MAX_LANES = 2 -%}          {%- comment -%} lane 2 still leaves 56% width {%- endcomment -%}
 {%- assign DAY_FMT = "%a %-m/%-d" -%} {%- comment -%} native date_format: short {%- endcomment -%}
 {%- assign HIGHLIGHT_TODAY = true -%}
 {%- assign SHADE_WEEKENDS = true -%}
 {%- assign VIEW = "quadrant" -%}          {%- comment -%} full | half_horizontal | half_vertical | quadrant {%- endcomment -%}
 {%- assign HEAD_SIZE = "small" -%}
-{%- assign BAR_W = 3 -%}
+{%- assign MIN_BLOCK_H = 14 -%}       {%- comment -%} one text line plus its border {%- endcomment -%}
 
 {%- comment -%} ---- derived: resolve one token + glyph per calendar, once ---- {%- endcomment -%}
 {%- assign events = src.events | sort: "start_full" -%}
@@ -82,6 +85,15 @@
   {%- assign tokens_s = tokens_s | append: t | append: "," -%}
 {%- endfor -%}
 {%- assign CAL_TOKENS = tokens_s | split: "," -%}
+
+{%- comment -%} contrasting text colour for each fill {%- endcomment -%}
+{%- assign texts_s = "" -%}
+{%- for t in CAL_TOKENS -%}
+  {%- assign txt = "white" -%}
+  {%- for lt in LIGHT_TOKENS -%}{%- if lt == t -%}{%- assign txt = "black" -%}{%- break -%}{%- endif -%}{%- endfor -%}
+  {%- assign texts_s = texts_s | append: txt | append: "," -%}
+{%- endfor -%}
+{%- assign CAL_TEXTS = texts_s | split: "," -%}
 
 {%- comment -%}
   ---- pick the axis range: tight unless something in the window falls
@@ -113,7 +125,6 @@
 {%- assign END_MIN = GRID_END_H | times: 60 -%}
 {%- assign SPAN_MIN = END_MIN | minus: START_MIN -%}
 {%- assign HOURS = GRID_END_H | minus: GRID_START_H -%}
-{%- assign HOUR_H = GRID_TARGET_H | divided_by: HOURS -%}
 {%- assign GRID_H = HOUR_H | times: HOURS -%}
 
 <style>
@@ -127,7 +138,10 @@
   .cg-allday { border-bottom: 1px solid currentColor; align-items: stretch; }
   .cg-allday .cg-day { border-left: 1px solid currentColor; }
   .cg-axis--label { display: flex; align-items: center; }
+  /* The grid may be taller than the panel; clip at the bottom the way
+     the native render does rather than shrink the text. */
   .cg-grid { display: flex; height: var(--cg-grid-h); flex: 0 0 var(--cg-grid-h); }
+  .cg-wrap { overflow: hidden; }
   .cg-axis--hours { display: flex; flex-direction: column; }
   /* Pinned, not flexed: a flex axis compresses when the view is shorter
      than the grid, and then the labels no longer line up with the hour
@@ -142,23 +156,25 @@
     background-image: repeating-linear-gradient(
       to bottom, #999 0, #999 1px, transparent 1px, transparent var(--cg-hour-h));
   }
-  /* An event is a duration BAR plus a TEXT ENTRY anchored at its start,
-     the way the native plugin draws it. The entry may extend below the
-     bar, so a 30-minute event stays readable instead of collapsing to
-     an 8px rectangle. */
-  .cg-bar { position: absolute; width: var(--cg-bar-w); }
-  .cg-entry {
+  /* A solid filled block spanning the event's duration, text inside.
+     Later blocks in a cluster cascade right and paint OVER earlier ones
+     (DOM order), the way the native render stacks them, so a block keeps
+     a usable width instead of being divided into slivers. The white
+     border is what separates two overlapping fills. */
+  .cg-block {
     position: absolute; box-sizing: border-box; overflow: hidden;
-    height: var(--cg-line-h); line-height: var(--cg-line-h);
+    border: 1px solid #fff; right: 0;
   }
-  .cg-more { position: absolute; right: 0; line-height: var(--cg-line-h); }
-  .cg-line { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cg-ad { display: flex; align-items: center; line-height: 1.1; }
+  .cg-line {
+    display: block; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; line-height: var(--cg-line-h);
+  }
+  .cg-adbar { overflow: hidden; border: 1px solid #fff; }
 </style>
 
 <div class="view view--{{ VIEW }}">
   <div class="layout">
-    <div class="cg-wrap" style="--cg-axis-w:{{ AXIS_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-bar-w:{{ BAR_W }}px;--cg-line-h:{{ LINE_H }}px">
+    <div class="cg-wrap" style="--cg-axis-w:{{ AXIS_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px">
 
       {%- comment -%} ---------- day header row ---------- {%- endcomment -%}
       <div class="cg-row cg-row--head">
@@ -204,9 +220,9 @@
                 {%- for c in cals -%}{%- if c == ev.calname -%}{%- assign ci = forloop.index0 -%}{%- break -%}{%- endif -%}{%- endfor -%}
                 {%- assign token = CAL_TOKENS[ci] -%}
                 {%- assign gi = ci | modulo: GLYPHS.size -%}
-                <div class="cg-ad gap--xsmall" data-allday="true">
-                  <span class="label label--xsmall text--{{ token }}">{{ GLYPHS[gi] }}</span>
-                  <span class="label label--xsmall cg-line">{{ ev.summary }}</span>
+                {%- assign txt = CAL_TEXTS[ci] -%}
+                <div class="cg-adbar bg--{{ token }} rounded--small" data-allday="true">
+                  <span class="label label--xsmall cg-line text--{{ txt }}">{{ ev.summary }}</span>
                 </div>
               {%- endfor -%}
             </div>
@@ -382,16 +398,6 @@
               {%- unless seen -%}{%- continue -%}{%- endunless -%}
               {%- if lane < 0 -%}{%- continue -%}{%- endif -%}
 
-              {%- comment -%} width divisor is this cluster's own visible lane count {%- endcomment -%}
-              {%- assign VIS = 1 -%}
-              {%- for cpair in CLUS -%}
-                {%- assign cp = cpair | split: ":" -%}
-                {%- assign cid = cp[0] | times: 1 -%}
-                {%- if cid == myclus -%}{%- assign VIS = cp[1] | times: 1 -%}{%- break -%}{%- endif -%}
-              {%- endfor -%}
-              {%- if VIS > MAX_LANES -%}{%- assign VIS = MAX_LANES -%}{%- endif -%}
-              {%- if VIS < 1 -%}{%- assign VIS = 1 -%}{%- endif -%}
-              {%- assign lane_w = 100 | divided_by: VIS -%}
 
               {%- assign tb = ev.start_full | split: "T" | last | split: ":" -%}
               {%- assign s1 = tb[0] | times: 60 | plus: tb[1] -%}
@@ -403,17 +409,29 @@
               {%- if ve <= START_MIN or vs >= END_MIN -%}{%- continue -%}{%- endif -%}
               {%- assign top = vs | minus: START_MIN | times: GRID_H | divided_by: SPAN_MIN -%}
               {%- assign hgt = ve | minus: vs | times: GRID_H | divided_by: SPAN_MIN -%}
-              {%- if hgt < MIN_BAR_H -%}{%- assign hgt = MIN_BAR_H -%}{%- endif -%}
-              {%- assign lane_l = lane | times: lane_w -%}
+              {%- comment -%}
+                A block never shrinks below one line of text; the native
+                render does the same, letting a short event overlap the
+                one after it rather than become unreadable.
+              {%- endcomment -%}
+              {%- if hgt < MIN_BLOCK_H -%}{%- assign hgt = MIN_BLOCK_H -%}{%- endif -%}
+              {%- assign lane_l = lane | times: LANE_OFFSET -%}
 
               {%- assign ci = 0 -%}
               {%- for c in cals -%}{%- if c == ev.calname -%}{%- assign ci = forloop.index0 -%}{%- break -%}{%- endif -%}{%- endfor -%}
               {%- assign token = CAL_TOKENS[ci] -%}
               {%- assign gi = ci | modulo: GLYPHS.size -%}
 
-              <div class="cg-bar bg--{{ token }}" style="top:{{ top }}px;height:{{ hgt }}px;left:{{ lane_l }}%" data-bar="{{ lane }}" data-bar-geom="{{ top }},{{ hgt }},{{ lane_l }},{{ lane_w }}"></div>
-              <div class="cg-entry" style="top:{{ ty }}px;left:calc({{ lane_l }}% + {{ BAR_W }}px);width:calc({{ lane_w }}% - {{ BAR_W }}px)" data-entry="{{ lane }}" data-entry-geom="{{ ty }},{{ LINE_H }},{{ lane_l }},{{ lane_w }}">
-                <span class="label label--xsmall cg-line"><span class="text--{{ token }}">{{ GLYPHS[gi] }}</span> {{ ev.start }} {{ ev.summary }}</span>
+              {%- assign txt = CAL_TEXTS[ci] -%}
+              {%- assign two_line_h = LINE_H | times: 2 | plus: 2 -%}
+              {%- if hgt >= two_line_h -%}{%- assign lines = 2 -%}{%- else -%}{%- assign lines = 1 -%}{%- endif -%}
+              <div class="cg-block bg--{{ token }} rounded--small" style="top:{{ top }}px;height:{{ hgt }}px;left:{{ lane_l }}%" data-block="{{ top }},{{ hgt }},{{ lane_l }},{{ lines }},{{ LINE_H }}">
+                {%- if lines == 2 -%}
+                  <span class="label label--xsmall cg-line text--{{ txt }}">{{ ev.start }} - {{ ev.end }}</span>
+                  <span class="label label--xsmall cg-line text--{{ txt }}">{{ ev.summary }}</span>
+                {%- else -%}
+                  <span class="label label--xsmall cg-line text--{{ txt }}">{{ ev.start }} - {{ ev.end }} - {{ ev.summary }}</span>
+                {%- endif -%}
               </div>
             {%- endfor -%}
 

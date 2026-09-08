@@ -29,19 +29,23 @@ for layout in full half_horizontal half_vertical quadrant; do
     grep -q 'data-grid-col="2026-09-08"' "$out" || { echo "FAIL: $out day math did not advance a day"; exit 1; }
     grep -q 'label--filled" data-day-header' "$out" || { echo "FAIL: $out does not highlight today"; exit 1; }
 
-    blocks=$(grep -o 'data-entry-geom' "$out" | wc -l | tr -d ' ')
-    [ "$blocks" -ge 4 ] || { echo "FAIL: $out placed $blocks text entries, want >= 4"; exit 1; }
+    blocks=$(grep -o 'data-block=' "$out" | wc -l | tr -d ' ')
+    [ "$blocks" -ge 4 ] || { echo "FAIL: $out placed $blocks blocks, want >= 4"; exit 1; }
     grep -q 'data-allday="true"' "$out" || { echo "FAIL: $out has no all-day band entries"; exit 1; }
 
-    # Duration bars must be sized from the clock, not all identical.
-    grep -qE 'top:[0-9]+px;height:[0-9]+px' "$out" || { echo "FAIL: $out bars are not time-positioned"; exit 1; }
+    # Blocks must be sized from the clock, not all identical.
+    grep -qE 'top:[0-9]+px;height:[0-9]+px' "$out" || { echo "FAIL: $out blocks are not time-positioned"; exit 1; }
     [ "$(grep -oE 'top:[0-9]+px;height:[0-9]+px' "$out" | sort -u | wc -l | tr -d ' ')" -ge 3 ] || {
-        echo "FAIL: $out bars all share one geometry"; exit 1; }
+        echo "FAIL: $out blocks all share one geometry"; exit 1; }
 
-    # Overlapping events must be laned, not stacked on top of one another.
+    # Every block carries a calendar fill and contrasting text.
+    grep -q 'cg-block bg--' "$out" || { echo "FAIL: $out blocks are not filled with a calendar colour"; exit 1; }
+    grep -qE 'cg-line text--(white|black)' "$out" || { echo "FAIL: $out block text has no contrast class"; exit 1; }
+
+    # Overlapping events cascade into lanes rather than stacking.
     # The quadrant is deliberately single-lane: too narrow for two.
     if [ "$layout" != "quadrant" ]; then
-        grep -q 'data-entry="1"' "$out" || { echo "FAIL: $out never uses a second lane"; exit 1; }
+        grep -qE 'left:(22|44)%' "$out" || { echo "FAIL: $out never cascades a second lane"; exit 1; }
     fi
 
     # The window is today..today+N; anything outside it must not render.
