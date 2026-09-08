@@ -14,10 +14,10 @@ NODE = next(v for v in FIX['variables'].values()
 EVENTS = NODE['events']
 TODAY = NODE['today_in_tz'].split('T')[0]
 
-SPAN = re.compile(r'<span class="label label--xsmall cg-line[^"]*">(.*?)</span>', re.S)
+SPAN = re.compile(r'<span class="label label--small cg-line[^"]*">(.*?)</span>', re.S)
 BLOCK = re.compile(
-    r'<div class="cg-block[^"]*"[^>]*data-block="([\d,]+)" data-times="([^"]*)" '
-    r'data-title="([^"]*)">(.*?)</div>', re.S)
+    r'<div class="cg-block[^"]*"[^>]*data-block="([\d,]+)" data-form="(\d)" '
+    r'data-times="([^"]*)" data-title="([^"]*)">(.*?)</div>', re.S)
 
 
 def flat(s):
@@ -52,6 +52,11 @@ def truncate(s, n):
     return s if len(s) <= n else s[:n - 3] + '...'
 
 
+# Every title the fixture could legitimately produce, per column width.
+EXPECTED_TITLES = {n: {truncate(ev['summary'], n): ev for ev in EVENTS}
+                   for n in range(10, 80)}
+
+
 for f in sorted((ROOT / '_build').glob('*.html')):
     h = f.read_text()
     name = f.name
@@ -80,14 +85,14 @@ for f in sorted((ROOT / '_build').glob('*.html')):
     if hours and not 0 <= want[1] - 1 - hours[-1] < every:
         fail.append(f'{name}: last hour label {hours[-1]} does not reach {want[1] - 1}')
 
-    drawn, more_total = set(), 0
+    drawn_titles, more_total = set(), 0
     cols = re.split(r'<div class="cg-col[^"]*" data-grid-col="', h)[1:]
     if not cols:
         fail.append(f'{name}: no grid columns')
     for chunk in cols:
         day = chunk.split('"', 1)[0]
         spans = []
-        for geom, dtimes, dtitle, inner in BLOCK.findall(chunk):
+        for geom, form, dtimes, dtitle, inner in BLOCK.findall(chunk):
             top, hgt, left, lines, line_h = (int(x) for x in geom.split(','))
             need = lines * line_h + 2
             if need > hgt:
@@ -96,12 +101,18 @@ for f in sorted((ROOT / '_build').glob('*.html')):
                 fail.append(f'{name} {day}: line height {line_h}px is below the 10px floor')
             rendered = flat(' '.join(SPAN.findall(inner)))
             title = flat(dtitle)
-            want = flat(dtimes + ' ' + title)
+            # The title leads and the times follow; form 3 has dropped the
+            # times entirely rather than shorten the title.
+            want = title if form == '3' else flat(title + ' ' + dtimes)
             if rendered != want:
                 fail.append(f'{name} {day}: rendered {rendered!r} != {want!r}')
+            if not rendered.startswith(title):
+                fail.append(f'{name} {day}: {rendered!r} does not lead with its title')
             if title.endswith('...') and len(title) != title_chars:
                 fail.append(f'{name} {day}: title {title!r} shortened below the column width')
-            drawn.add(want)
+            if title not in EXPECTED_TITLES.get(title_chars, {}):
+                fail.append(f'{name} {day}: title {title!r} is not any fixture event, in full')
+            drawn_titles.add(title)
             spans.append((top, top + hgt, want))
         spans.sort()
         for (t1, b1, w1), (t2, b2, w2) in zip(spans, spans[1:]):
@@ -110,8 +121,8 @@ for f in sorted((ROOT / '_build').glob('*.html')):
         for n in re.findall(r'data-more="(\d+)"', chunk):
             more_total += int(n)
 
-    if len(drawn) < 4:
-        fail.append(f'{name}: only {len(drawn)} distinct blocks drawn')
+    if len(drawn_titles) < 4:
+        fail.append(f'{name}: only {len(drawn_titles)} distinct blocks drawn')
 
     # Every timed fixture event inside the window is either drawn in full
     # or counted into a "+N more".
@@ -121,8 +132,7 @@ for f in sorted((ROOT / '_build').glob('*.html')):
             continue
         if ev['start_full'].split('T')[0] not in window:
             continue
-        want = flat(f"{ev['start']} - {ev['end']} {truncate(ev['summary'], title_chars)}")
-        if want not in drawn:
+        if truncate(ev['summary'], title_chars) not in drawn_titles:
             missing.append(ev['summary'])
     if len(missing) > more_total:
         fail.append(f'{name}: {len(missing)} events absent but only +{more_total} counted: '

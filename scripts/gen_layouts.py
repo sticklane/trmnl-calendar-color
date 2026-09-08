@@ -21,7 +21,9 @@ SHARED = """{%- assign src = google_calendar_12345 -%}
 {%- assign HIGHLIGHT_TODAY = true -%}
 {%- assign MARK_WEEKENDS = true -%}
 {%- assign DAY_FMT = "%a %-m/%-d" -%}
-{%- assign HEAD_SIZE = "small" -%}
+{%- assign HEAD_SIZE = "small" -%}   {%- comment -%} label--small is the framework's 12px pixel-hinted
+                                          face (TRMNL12). label--xsmall is an ALIAS of the 16px one, so
+                                          it is not smaller; nothing below 12px renders without fuzz. {%- endcomment -%}
 {%- assign AXIS_MODE_FALLBACK = "fit" -%}
 {%- assign EMPTY_START_H = 8 -%}
 {%- assign EMPTY_END_H = 18 -%}
@@ -32,10 +34,10 @@ SHARED = """{%- assign src = google_calendar_12345 -%}
 
 LAYOUTS = {
     # view              days panelW axis panelH head titlebar hmax every one_line title legend maxblock
-    'full':            (3, 800, 41, 480, 24, 44, 24, 1, 31, 30, 'true', 38),
-    'half_horizontal': (3, 800, 38, 240, 20, 36, 16, 3, 31, 30, 'true', 26),
-    'half_vertical':   (2, 400, 40, 480, 24, 44, 22, 2, 22, 21, 'false', 38),
-    'quadrant':        (2, 400, 34, 240, 20, 36, 15, 3, 22, 21, 'false', 26),
+    'full':            (3, 800, 41, 480, 24, 44, 24, 1, 36, 35, 'true', 38),
+    'half_horizontal': (3, 800, 38, 240, 20, 36, 16, 3, 36, 35, 'true', 26),
+    'half_vertical':   (2, 400, 40, 480, 24, 44, 22, 2, 25, 24, 'false', 38),
+    'quadrant':        (2, 400, 34, 240, 20, 36, 15, 3, 25, 24, 'false', 26),
 }
 
 HEAD = """{%- comment -%}

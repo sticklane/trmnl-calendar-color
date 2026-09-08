@@ -40,7 +40,9 @@
 {%- assign HIGHLIGHT_TODAY = true -%}
 {%- assign MARK_WEEKENDS = true -%}
 {%- assign DAY_FMT = "%a %-m/%-d" -%}
-{%- assign HEAD_SIZE = "small" -%}
+{%- assign HEAD_SIZE = "small" -%}   {%- comment -%} label--small is the framework's 12px pixel-hinted
+                                          face (TRMNL12). label--xsmall is an ALIAS of the 16px one, so
+                                          it is not smaller; nothing below 12px renders without fuzz. {%- endcomment -%}
 {%- assign AXIS_MODE_FALLBACK = "fit" -%}
 {%- assign EMPTY_START_H = 8 -%}
 {%- assign EMPTY_END_H = 18 -%}
@@ -58,8 +60,8 @@
 {%- assign TITLE_H = 36 -%}         {%- comment -%} framework title bar {%- endcomment -%}
 {%- assign HOUR_H_MAX = 16 -%}         {%- comment -%} px per hour ceiling {%- endcomment -%}
 {%- assign HOUR_EVERY = 3 -%}         {%- comment -%} label every Nth hour {%- endcomment -%}
-{%- assign ONE_LINE_CHARS = 31 -%}   {%- comment -%} "start - end  Title" that fits the column on one line {%- endcomment -%}
-{%- assign TITLE_CHARS = 30 -%}       {%- comment -%} a title longer than this is the only thing ever truncated {%- endcomment -%}
+{%- assign ONE_LINE_CHARS = 36 -%}   {%- comment -%} "start - end  Title" that fits the column on one line {%- endcomment -%}
+{%- assign TITLE_CHARS = 35 -%}       {%- comment -%} a title longer than this is the only thing ever truncated {%- endcomment -%}
 {%- assign MAX_BLOCK_H = 26 -%}     {%- comment -%} a block never grows past this, so one long event cannot
                                             push the whole day to the bottom of the column {%- endcomment -%}
 {%- assign SHOW_LEGEND = true -%}
@@ -281,7 +283,7 @@
       {%- if SHOW_ALLDAY -%}
         <div class="cg-row cg-allday">
           <div class="cg-axis cg-axis--label">
-            <span class="label label--xsmall">all-day</span>
+            <span class="label label--small">all-day</span>
           </div>
           {%- for n in (1..NUM_DAYS) -%}
             {%- assign offset = n | minus: 1 | times: 86400 -%}
@@ -305,7 +307,7 @@
                 {%- assign txt = CAL_TEXTS[ci] -%}
                 {%- assign ad_title = ev.summary | truncate: TITLE_CHARS -%}
                 <div class="cg-adbar bg--{{ token }}" data-allday="true" data-text="{{ ad_title | escape }}">
-                  <span class="label label--xsmall cg-line text--{{ txt }}">{{ ad_title }}</span>
+                  <span class="label label--small cg-line text--{{ txt }}">{{ ad_title }}</span>
                 </div>
               {%- endfor -%}
             </div>
@@ -326,7 +328,7 @@
                 {%- assign h12 = h | modulo: 12 -%}
                 {%- if h12 == 0 -%}{%- assign h12 = 12 -%}{%- endif -%}
                 {%- if h < 12 -%}{%- assign ap = "am" -%}{%- else -%}{%- assign ap = "pm" -%}{%- endif -%}
-                <span class="label label--xsmall" data-hour="{{ h }}">{{ h12 }}{{ ap }}</span>
+                <span class="label label--small" data-hour="{{ h }}">{{ h12 }}{{ ap }}</span>
               {%- endif -%}
             </div>
           {%- endfor -%}
@@ -376,13 +378,22 @@
               {%- assign ve = e1 -%}{%- if ve > END_MIN -%}{%- assign ve = END_MIN -%}{%- endif -%}
               {%- if ve <= START_MIN or vs >= END_MIN -%}{%- continue -%}{%- endif -%}
 
+              {%- comment -%}
+                The title comes first and is the last thing to give way.
+                Form 1 puts "Title  h:mm-h:mm" on one line when it fits the
+                column; form 2 moves the times to a second line; form 3
+                drops the times entirely, which only happens when the
+                column has room for one more line but not two. The title
+                itself is shortened only when the title ALONE is wider than
+                the column.
+              {%- endcomment -%}
               {%- assign title = ev.summary | truncate: TITLE_CHARS -%}
-              {%- assign times = ev.start | append: " - " | append: ev.end -%}
-              {%- assign one = times | append: "  " | append: title -%}
+              {%- assign times = ev.start | append: "-" | append: ev.end -%}
+              {%- assign one = title | append: "  " | append: times -%}
               {%- if one.size <= ONE_LINE_CHARS -%}
-                {%- assign lines = 1 -%}{%- assign text_h = ONE_LINE_H -%}
+                {%- assign form = 1 -%}{%- assign lines = 1 -%}{%- assign text_h = ONE_LINE_H -%}
               {%- else -%}
-                {%- assign lines = 2 -%}{%- assign text_h = TWO_LINE_H -%}
+                {%- assign form = 2 -%}{%- assign lines = 2 -%}{%- assign text_h = TWO_LINE_H -%}
               {%- endif -%}
 
               {%- comment -%}
@@ -400,6 +411,10 @@
               {%- if hgt < text_h -%}{%- assign hgt = text_h -%}{%- endif -%}
               {%- assign top = vs | minus: START_MIN | times: GRID_H | divided_by: SPAN_MIN -%}
               {%- if col_free > top -%}{%- assign top = col_free -%}{%- endif -%}
+              {%- assign room = GRID_H | minus: top -%}
+              {%- if form == 2 and room < TWO_LINE_H and room >= ONE_LINE_H -%}
+                {%- assign form = 3 -%}{%- assign lines = 1 -%}{%- assign text_h = ONE_LINE_H -%}
+              {%- endif -%}
               {%- assign bottom = top | plus: hgt -%}
               {%- if bottom > GRID_H -%}{%- assign more = more | plus: 1 -%}{%- continue -%}{%- endif -%}
               {%- assign col_free = bottom | plus: BLOCK_GAP -%}
@@ -408,12 +423,14 @@
               {%- for c in cals -%}{%- if c == ev.calname -%}{%- assign ci = forloop.index0 -%}{%- break -%}{%- endif -%}{%- endfor -%}
               {%- assign token = CAL_TOKENS[ci] -%}
               {%- assign txt = CAL_TEXTS[ci] -%}
-              <div class="cg-block bg--{{ token }}" style="top:{{ top }}px;height:{{ hgt }}px" data-block="{{ top }},{{ hgt }},0,{{ lines }},{{ LINE_H }}" data-times="{{ times }}" data-title="{{ title | escape }}">
-                {%- if lines == 2 -%}
-                  <span class="label label--xsmall cg-line text--{{ txt }}">{{ times }}</span>
-                  <span class="label label--xsmall cg-line text--{{ txt }}">{{ title }}</span>
+              <div class="cg-block bg--{{ token }}" style="top:{{ top }}px;height:{{ hgt }}px" data-block="{{ top }},{{ hgt }},0,{{ lines }},{{ LINE_H }}" data-form="{{ form }}" data-times="{{ times }}" data-title="{{ title | escape }}">
+                {%- if form == 2 -%}
+                  <span class="label label--small cg-line text--{{ txt }}">{{ title }}</span>
+                  <span class="label label--small cg-line text--{{ txt }}">{{ times }}</span>
+                {%- elsif form == 3 -%}
+                  <span class="label label--small cg-line text--{{ txt }}">{{ title }}</span>
                 {%- else -%}
-                  <span class="label label--xsmall cg-line text--{{ txt }}">{{ times }}&nbsp;&nbsp;{{ title }}</span>
+                  <span class="label label--small cg-line text--{{ txt }}">{{ title }}&nbsp;&nbsp;{{ times }}</span>
                 {%- endif -%}
               </div>
             {%- endfor -%}
@@ -421,7 +438,7 @@
             {%- if more > 0 -%}
               {%- assign more_top = GRID_H | minus: ONE_LINE_H -%}
               <div class="cg-block text--right px--1" style="top:{{ more_top }}px;height:{{ ONE_LINE_H }}px" data-more="{{ more }}">
-                <span class="label label--xsmall cg-line">+{{ more }} more</span>
+                <span class="label label--small cg-line">+{{ more }} more</span>
               </div>
             {%- endif -%}
           </div>
