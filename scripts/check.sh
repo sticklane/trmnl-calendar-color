@@ -79,6 +79,9 @@ for layout in full half_horizontal half_vertical quadrant; do
     total=$(grep -o 'data-total-h="[0-9]*"' "$out" | head -1 | grep -o '[0-9]*')
     [ -n "$panel" ] && [ -n "$total" ] || { echo "FAIL: $out does not report its height budget"; exit 1; }
     [ "$total" -le "$panel" ] || { echo "FAIL: $out wants ${total}px of a ${panel}px panel - the header row will be clipped"; exit 1; }
+    pw=$(grep -o 'data-panel-w="[0-9]*"' "$out" | head -1 | grep -o '[0-9]*')
+    cw=$(grep -o 'data-content-w="[0-9]*"' "$out" | head -1 | grep -o '[0-9]*')
+    [ "$cw" = "$pw" ] || { echo "FAIL: $out columns span ${cw}px of a ${pw}px panel - they must divide it exactly"; exit 1; }
 
     # The window is today..today+N; anything outside it must not render.
     if grep -q 'should not render' "$out"; then

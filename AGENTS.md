@@ -99,7 +99,10 @@ anti-aliased. `ONE_LINE_CHARS` and `TITLE_CHARS` are derived from that
 inks, and a dither reads as fuzz. So: no grey tokens, no opacity, no
 half-tone fill anywhere; block text is black or white only; hour rules and column
 edges land on whole pixels, which is why `AXIS_W` is chosen to divide the
-panel exactly and `HOUR_H` is an integer quotient. `check.sh` greps the
+panel exactly and `HOUR_H` is an integer quotient. `PANEL_W`/`PANEL_H` are
+the USABLE box - 780x460 on the 800x480 device - because the framework's
+`.screen` insets its content by 10px on every side; budgeting against the
+raw panel overflowed both axes and clipped the right-hand column. `check.sh` greps the
 built HTML for every one of those.
 
 ## Commands

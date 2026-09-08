@@ -52,9 +52,11 @@
 {%- comment -%} ---- this layout ---- {%- endcomment -%}
 {%- assign VIEW = "quadrant" -%}
 {%- assign NUM_DAYS = 2 -%}          {%- comment -%} day columns, starting today {%- endcomment -%}
-{%- assign PANEL_W = 400 -%}         {%- comment -%} panel width; the columns divide it into whole px {%- endcomment -%}
+{%- assign PANEL_W = 380 -%}         {%- comment -%} USABLE width: the panel less the framework .screen's 10px
+                                            box inset on each side. The columns divide it into whole px {%- endcomment -%}
 {%- assign AXIS_W = 34 -%}           {%- comment -%} chosen so (PANEL_W - AXIS_W) / NUM_DAYS is exact {%- endcomment -%}
-{%- assign PANEL_H = 240 -%}        {%- comment -%} panel height; the grid gets what the chrome leaves {%- endcomment -%}
+{%- assign PANEL_H = 220 -%}        {%- comment -%} USABLE height, same inset. The grid gets what the day
+                                            headers, the all-day band and the legend leave of it {%- endcomment -%}
 {%- assign HEAD_H = 20 -%}          {%- comment -%} day-header row {%- endcomment -%}
 {%- assign HOUR_H_MAX = 15 -%}         {%- comment -%} px per hour ceiling {%- endcomment -%}
 {%- assign HOUR_EVERY = 3 -%}         {%- comment -%} label every Nth hour {%- endcomment -%}
@@ -291,7 +293,7 @@
 
 <div class="view view--{{ VIEW }}">
   <div class="layout">
-    <div class="cg-wrap" data-grid-h="{{ GRID_H }}" data-hour-h="{{ HOUR_H }}" data-axis-mode="{{ AXIS_MODE }}" data-axis-start="{{ GRID_START_H }}" data-axis-end="{{ GRID_END_H }}" data-title-chars="{{ TITLE_CHARS }}" data-panel-h="{{ PANEL_H }}" data-line-h="{{ LINE_H }}" data-total-h="{{ HEAD_H | plus: AD_H | plus: GRID_H | plus: LEGEND_H }}" style="--cg-axis-w:{{ AXIS_W }}px;--cg-col-w:{{ COL_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px;--cg-legend-h:{{ LEGEND_H }}px">
+    <div class="cg-wrap" data-grid-h="{{ GRID_H }}" data-hour-h="{{ HOUR_H }}" data-axis-mode="{{ AXIS_MODE }}" data-axis-start="{{ GRID_START_H }}" data-axis-end="{{ GRID_END_H }}" data-title-chars="{{ TITLE_CHARS }}" data-panel-h="{{ PANEL_H }}" data-panel-w="{{ PANEL_W }}" data-content-w="{{ COL_W | times: NUM_DAYS | plus: AXIS_W }}" data-line-h="{{ LINE_H }}" data-total-h="{{ HEAD_H | plus: AD_H | plus: GRID_H | plus: LEGEND_H }}" style="--cg-axis-w:{{ AXIS_W }}px;--cg-col-w:{{ COL_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px;--cg-legend-h:{{ LEGEND_H }}px">
 
       {%- comment -%} ---------- day header row ---------- {%- endcomment -%}
       <div class="cg-row cg-row--head">
