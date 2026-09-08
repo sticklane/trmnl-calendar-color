@@ -6,6 +6,31 @@ Four Liquid templates (one per TRMNL layout tab) for a **Private Plugin, strateg
 
 The public repo (`usetrmnl/plugins/lib/google_calendar`) only holds the Ruby data layer plus thin ERB wrappers. The actual week/month/schedule grids (`plugins/calendars/full_week`, `full_month`, `schedule`, `full_auto`, `all_day_event`, `title_bar`) live in TRMNL's private core app and use a commercial FullCalendar license. Not forkable. What *is* exposed: every event object already carries `calname` and `background_color`, and the locals include `calendar_names` (id → display name). This template builds on that.
 
+## Is there anything to fork instead?
+
+Checked 2026-09-07. No.
+
+- `usetrmnl/plugins` publishes `lib/google_calendar/google_calendar.rb`
+  and `lib/google_calendar/views/calendars/_full.html.erb`, but that ERB
+  only dispatches on `event_layout` to `full_week`, `full_month`,
+  `schedule` and `full_auto`, and none of those partials is in the repo.
+  Its README says the code is published "to showcase which values, and
+  how, are extracted", not to run.
+- TRMNL Recipes are forkable - "Forking a Recipe will make the markup and
+  other settings editable, as if it was your own"
+  (help.trmnl.com/en/articles/10122094-plugin-recipes, needs the
+  Developer Edition add-on). But native plugins are not Recipes, so the
+  Google Calendar grid is not on that list.
+- Every public community calendar plugin renders an agenda LIST, not an
+  hour-axis grid: `zoltanhosszu/trmnl-calendar`, `jfsso/trmnl-calendar`,
+  `frjo/usetrmnl-plugins`. The marketplace "Simple Calendar" recipe is a
+  month grid; "Pretty Calendar" is closed and CalDAV-only.
+- The design framework (trmnl.com/framework) ships `Grid`, `Columns` and
+  `Table` but no calendar or week component.
+
+So the grid here is hand-built, and `reference/native-3day/NOTES.md`
+records what it was built to match.
+
 ## Setup
 
 1. Connect **Google Calendar** natively. Select every calendar you want. Set Event Layout to `schedule` (14-day window) or `week` (7-day) — that controls how far ahead the JSON reaches.
@@ -65,7 +90,7 @@ Deploy by pasting each `src/*.liquid` into its markup tab, per Setup above.
 
 ## Gotchas
 
-- **Hue tokens collapse on grayscale panels.** `bg--red` and `bg--blue` at the same lightness step render as the *same* dither on the original 1-bit TRMNL and the same gray on TRMNL X (4-bit grayscale). Only true color panels distinguish hues. That's why the defaults are grayscale steps spaced ≥ 15 apart plus glyphs. Use hue tokens only if your device shows color.
+- **Hue tokens collapse on grayscale panels, but not on a colour one.** `bg--red` and `bg--blue` at the same lightness step render as the *same* dither on the 1-bit TRMNL and the same gray on TRMNL X. The placeholder `CAL_MAP` in this repo is therefore grayscale steps spaced ≥ 15 apart plus glyphs. A TRMNL OG (B/W/R/Y) panel does distinguish hues: the framework dithers a hue token into the device's ink set, selected by the `screen--color-4bwry` palette. Check before you choose - the markup editor's device dropdown has a `TRMNL OG (B/W/R/Y)` entry that previews exactly that mapping.
 - **Google's own hex colors are ignored on purpose.** `background_color` is present in the JSON, but mapping arbitrary hex to a dither pattern in Liquid is brittle and Google's palette shifted between API versions. Explicit `CAL_MAP` is deterministic.
 - **Day grouping uses `start_full | date`.** Timed events carry their offset (`...-05:00`), so the day key is local. All-day events are `YYYY-MM-DD` strings and parse fine. Multi-day all-day events appear once, under their start date (native expands them per day — not replicated here).
 - **JSON shape assumption:** `events` is a flat, sorted array (matches current `prepare_events`). The April 2025 hackathon sample showed `events` as a hash keyed by day label. If your merge variable shows that older shape, swap the outer loop for `{% for day in events %}{% for ev in day[1] %}…` and drop the day-key logic.

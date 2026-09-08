@@ -22,9 +22,10 @@ only render them.
 | `bin/trmnlp` | gem-or-Docker wrapper for the `trmnlp` CLI |
 | `scripts/check.sh` | the canonical check |
 | `scripts/geometry_check.py` | asserts block rectangles never intersect |
+| `reference/native-3day/` | what the native render exposes, and the settings it came from |
 
 Each layout is the same template with a different knob block at the top
-(`NUM_DAYS`, `GRID_TARGET_H`, `HOUR_EVERY`, `SHOW_LEGEND`, `CAL_MAP`, …). A change
+(`NUM_DAYS`, `GRID_BUDGET_H`, `HOUR_EVERY`, `SHOW_LEGEND`, `CAL_MAP`, …). A change
 to the render body has to land in all four files.
 
 The knobs mirror the native Google Calendar instance's own display
@@ -40,15 +41,18 @@ The axis uses `TIGHT_START_H`..`TIGHT_END_H` (6-22) when every event in
 the window fits inside it, which buys a couple more pixels per hour, and
 widens to the native range only when something starts early or runs late.
 
-`GRID_TARGET_H` is a px budget, not the height: `HOUR_H` is floored from
-it and the real `GRID_H` is `HOUR_H * HOURS`. Setting a height directly
-desynchronises the hour rules (a repeating gradient at a fixed pitch)
-from the axis cells and the block maths.
+`GRID_BUDGET_H` is a px budget, not the height: `HOUR_H` is that budget
+divided by the hours on the axis, clamped to `HOUR_H_MIN..HOUR_H_MAX`,
+and the real `GRID_H` is `HOUR_H * HOURS`. Pinning `HOUR_H` instead is
+what broke the live render on 2026-09-07: 24px times an 18-hour axis
+overflowed the panel, and TRMNL centres an overflowing view, so the day
+headers went off the top. `scripts/check.sh` now reads `data-grid-h` back
+out of the built HTML and fails if it exceeds the layout's budget.
 
-An event is drawn the way the native plugin draws it: a thin bar spanning
-its duration, plus one line of text ("time title") anchored at its start.
-Sizing a rectangle to the duration is what an earlier version did, and a
-30-minute event became an 8px box with unreadable text.
+An event is drawn the way the native plugin draws it: a filled block
+spanning its duration with the text inside, one line ("time - title")
+when short and two (time, then title) when it is tall enough for both.
+`MIN_BLOCK_H` keeps a 15-minute event legible rather than an 8px sliver.
 
 Overlapping events are laned by an interval sweep — each takes the lowest
 lane free at its start — and `MAX_LANES` (2, or 1 on the quadrant) caps
@@ -84,6 +88,12 @@ Live on usetrmnl.com as private plugin <grid-id> (`trmnl-calendar-color`,
 strategy Plugin Merge), reading merge variable `google_calendar_<id>`
 and displayed on device <device-id>'s playlist, with the native instance kept
 on that playlist but hidden so it keeps syncing.
+
+Deploying the full layout means pasting `src/full.liquid` into the
+markup editor with the node name and `CAL_MAP` lines kept from the live
+copy. The form no-ops unless `data-markup-dirty-value` is `true`, and the
+editor's device dropdown must be set to `TRMNL OG (B/W/R/Y)` for the
+preview to show the colours the device will actually print.
 
 There is no CI workflow, on purpose: `scripts/check.sh` needs only Docker
 and runs locally in seconds, and TRMNL's generated workflow would push to
