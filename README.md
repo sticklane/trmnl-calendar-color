@@ -78,18 +78,29 @@ that keeps the local renderer happy. **Do not `trmnlp push`** — that
 would create a polling plugin on the server, not a Plugin Merge one.
 Deploy by pasting each `src/*.liquid` into its markup tab, per Setup above.
 
-## Knobs (top of each file)
+## Settings (on the plugin's page, not in the markup)
 
-| var | values | notes |
+| field | keyname | what |
 |---|---|---|
-| `MODE` | `bar` / `glyph` / `both` / `fill` | `both` is the default. `fill` shades the whole row — readable only with light tokens (gray-20 or lighter) on 1-bit |
-| `SHOW_LEGEND` | true/false | glyph + calendar name in the title bar |
-| `SHOW_TIME`, `SHOW_DESC` | true/false | |
-| `MAX_DAYS` | int, 0 = uncapped | quadrant = 1, half = 3 by default |
-| `DAY_FMT` | strftime | day header format |
+| Calendar colors | `cal_map` | one `calendar-id=colour` per line; commas also work. Ids are the `calname` values in the merge variable |
+| Default color | `default_color` | fill for any calendar the map does not list |
+| Hour axis | `axis_mode` | `fit` (an hour either side of the day's events) or `day` (midnight to midnight) |
+
+They are declared in `src/settings.yml` and edited on usetrmnl.com. The
+values written into the markup are only the empty-field fallback. The
+title-bar legend names each calendar next to its colour swatch, so the
+mapping is visible on the panel itself.
+
+## Layout knobs (generated, per layout)
+
+`scripts/gen_layouts.py` holds the table: `NUM_DAYS`, `PANEL_W`,
+`AXIS_W`, `GRID_BUDGET_H`, `HOUR_H_MAX`, `HOUR_EVERY`, `ONE_LINE_CHARS`,
+`TITLE_CHARS`, `MAX_BLOCK_H`, `SHOW_LEGEND`. Edit that table or
+`scripts/layout_body.liquid`, then run the script.
 
 ## Gotchas
 
+- **Only four inks print solid.** On the OG B/W/R/Y panel black, white, red and yellow are inks; every other token — grey steps, other hues, any opacity — is dithered into a speckle that reads as fuzz at 800x480. That is why weekends are marked with a heavier column rule instead of a shaded column, block text is black or white only, and `check.sh` greps the built HTML for greys, `rgba(`, `opacity:` and fractional pixel offsets.
 - **Hue tokens collapse on grayscale panels, but not on a colour one.** `bg--red` and `bg--blue` at the same lightness step render as the *same* dither on the 1-bit TRMNL and the same gray on TRMNL X. The placeholder `CAL_MAP` in this repo is therefore grayscale steps spaced ≥ 15 apart plus glyphs. A TRMNL OG (B/W/R/Y) panel does distinguish hues: the framework dithers a hue token into the device's ink set, selected by the `screen--color-4bwry` palette. Check before you choose - the markup editor's device dropdown has a `TRMNL OG (B/W/R/Y)` entry that previews exactly that mapping.
 - **Google's own hex colors are ignored on purpose.** `background_color` is present in the JSON, but mapping arbitrary hex to a dither pattern in Liquid is brittle and Google's palette shifted between API versions. Explicit `CAL_MAP` is deterministic.
 - **Day grouping uses `start_full | date`.** Timed events carry their offset (`...-05:00`), so the day key is local. All-day events are `YYYY-MM-DD` strings and parse fine. Multi-day all-day events appear once, under their start date (native expands them per day — not replicated here).

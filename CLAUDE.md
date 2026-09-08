@@ -2,20 +2,22 @@
 
 # Conventions
 
-## The four layouts move together
+## src/*.liquid are generated — never edit them
 
-`src/*.liquid` are four copies of one template that differ only in the
-knob block at the top (lines 1-40ish). Any edit below the
-`---- derived ----` comment belongs in all four files, or the layouts
-drift. Diff them against each other before committing:
-`diff src/full.liquid src/quadrant.liquid` should show knobs only.
+`scripts/layout_body.liquid` is the template and the `LAYOUTS` table in
+`scripts/gen_layouts.py` holds the per-layout knobs. Change one of those,
+run `python3 scripts/gen_layouts.py`, commit the regenerated files.
+`scripts/check.sh` runs `gen_layouts.py --check` first and fails if the
+tree disagrees.
 
 ## Never commit real calendar ids
 
-`CAL_MAP` in `src/*.liquid` and the fixture in `.trmnlp.yml` both ship
-placeholder addresses (`you@gmail.com`, `abc123@group.calendar.google.com`).
-The owner's real calendar ids are Google account identifiers — they belong in
-the markup pasted into usetrmnl.com, never in this repo.
+The fixture and the fallbacks ship placeholder addresses
+(`you@gmail.com`, `shared@group.calendar.google.com`). The owner's real
+calendar ids are Google account identifiers. They now live in the
+plugin's `cal_map` custom field on usetrmnl.com, not in markup at all —
+which is the point of that field. Never write one into this repo, and
+never print one into a transcript.
 
 ## Deploy is paste, not push
 
@@ -23,6 +25,13 @@ the markup pasted into usetrmnl.com, never in this repo.
 to a placeholder because trmnlp has no Plugin Merge strategy. Pushing
 would replace the Plugin Merge plugin with a polling one. Deploy by
 pasting each `src/*.liquid` into its markup tab on the site.
+
+## Colour tokens are the device's four inks
+
+`black`, `white`, `red`, `yellow`. Everything else — grey steps, other
+hues, opacity — is dithered into speckle on the OG B/W/R/Y panel and
+reads as fuzz. `check.sh` greps for greys, `rgba(`, `opacity:` and
+fractional pixel offsets and fails on any of them.
 
 ## Verify against the renderer, not just the linter
 
@@ -32,22 +41,16 @@ trmnlp renders as body text with a zero exit code. It asserts that the
 output is a grid and not a list: an hour axis, one grid column per day
 with today highlighted, the day math advancing, all-day band entries, and
 event blocks whose `top`/`height` differ from one another (proving they
-are placed from the clock rather than stacked). It also asserts that two
-9:00 events lane side by side, and that nothing outside the day window
-leaks in. `scripts/geometry_check.py` then parses the geometry and
-fails if two duration bars in a column intersect, if two text entries in
-the same lane overprint (their y ranges must be disjoint), or if an hour
-label is anything but a clean `\d{1,2}(am|pm)`.
+are placed from the clock rather than stacked). It builds the fixture twice, once per `axis_mode`, and asserts nothing
+outside the day window leaks in. `scripts/geometry_check.py` then asserts
+that each block's rendered spans equal that event's full
+`start - end  title`, that a title ending in an ellipsis was genuinely
+longer than the column, that no two blocks in a column overlap, that
+every in-window fixture event is either drawn or counted into a
+"+N more", and that the hour range and its first and last labels match
+what `axis_mode` should have produced.
 
 Keep those assertions in step with the template. The fixture is built to
-falsify them: an out-of-window event on either side, and a Tuesday
-cluster of a long block plus a stack of overlapping ones that only lanes
-correctly under a real sweep, and a Wednesday run of three back-to-back
-15-minute events that only reads correctly when the text pushes down.
-
-## Color tokens
-
-Grayscale steps are the default on purpose (see the README gotcha on hue
-collapse). Only reach for hue tokens (`bg--red`, `bg--blue`) once the
-target device is confirmed to be a color panel, and keep the glyphs on as
-the redundant channel either way.
+falsify them: an out-of-window event on either side, a five-minute event,
+three back-to-back fifteen-minute events, a nine-hour block, and a
+four-hour block under a stack of short ones.

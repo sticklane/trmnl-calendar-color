@@ -2,8 +2,8 @@
 
 Four TRMNL Liquid templates that render a **3 Day Week time grid** —
 hours down the left axis, one column per day starting today, every timed
-event a thin duration bar plus a text entry anchored at its start — with each
-event color-coded by which calendar it came from. They run as a TRMNL **Private Plugin with
+event a filled block carrying its start time, end time and title in
+full — colour-coded by which calendar it came from. They run as a TRMNL **Private Plugin with
 strategy Plugin Merge**, reading the merge variable a native Google
 Calendar plugin instance publishes. There is no application code and no
 data layer here — TRMNL's own plugin fetches the events; these templates
@@ -13,33 +13,39 @@ only render them.
 
 | path | what |
 |---|---|
-| `src/full.liquid` | full layout, 3 day columns, ~306px grid, hourly labels |
-| `src/half_horizontal.liquid` | half layout, 3 day columns, ~112px grid, every 3rd label |
-| `src/half_vertical.liquid` | half layout, 2 day columns, ~288px grid, legend off |
-| `src/quadrant.liquid` | quadrant layout, 2 day columns, ~104px grid, legend off |
-| `src/settings.yml` | plugin metadata read by trmnlp. Not the deploy path |
+| `scripts/layout_body.liquid` | THE template. Everything below the knobs |
+| `scripts/gen_layouts.py` | writes the four `src/*.liquid` from that body plus a knob table |
+| `src/*.liquid` | generated: full, half_horizontal, half_vertical, quadrant |
+| `src/settings.yml` | plugin metadata and the custom-field schema |
 | `.trmnlp.yml` | local-preview fixture that stands in for the merge variable |
 | `bin/trmnlp` | gem-or-Docker wrapper for the `trmnlp` CLI |
 | `scripts/check.sh` | the canonical check |
-| `scripts/geometry_check.py` | asserts block rectangles never intersect |
+| `scripts/geometry_check.py` | asserts every block holds its full text and nothing overlaps |
 | `reference/native-3day/` | what the native render exposes, and the settings it came from |
 
-Each layout is the same template with a different knob block at the top
-(`NUM_DAYS`, `GRID_BUDGET_H`, `HOUR_EVERY`, `SHOW_LEGEND`, `CAL_MAP`, …). A change
-to the render body has to land in all four files.
+`src/*.liquid` are GENERATED. Edit `scripts/layout_body.liquid` or the
+`LAYOUTS` table in `scripts/gen_layouts.py`, then run the script;
+`scripts/check.sh` fails if the tree disagrees. Four hand-maintained
+copies is how they drifted.
+
+Colours and the axis mode are the plugin's own custom fields
+(`cal_map`, `default_color`, `axis_mode`), declared in `src/settings.yml`
+and edited on the plugin's settings page. The values in the markup are
+only the empty-field fallback.
 
 The knobs mirror the native Google Calendar instance's own display
 settings, so the private plugin and the native one agree: `NUM_DAYS = 3`
-for its `three_day_week` layout, `DAY_FMT` for `date_format: short`,
-`HIGHLIGHT_TODAY` and `SHADE_WEEKENDS` for its matching toggles, and
-`WIDE_START_H` / `WIDE_END_H` (5 and 23) for its `scroll_time` and
-`scroll_time_end`. Event times are printed straight from `ev.start`,
-which the native plugin has already formatted with its `time_format`, so
-the clock style needs no knob.
+for its `three_day_week` layout, `DAY_FMT` for `date_format: short`, and
+`HIGHLIGHT_TODAY` / `MARK_WEEKENDS` for its matching toggles. Event times
+print straight from `ev.start`, which the native plugin has already
+formatted with its `time_format`, so the clock style needs no knob.
 
-The axis uses `TIGHT_START_H`..`TIGHT_END_H` (6-22) when every event in
-the window fits inside it, which buys a couple more pixels per hour, and
-widens to the native range only when something starts early or runs late.
+`axis_mode` picks the hour range. `fit` (default) runs from the whole
+hour before the earliest timed event in view to the whole hour after the
+latest one ends, each end rounded outward and clamped to midnight
+independently; all-day events never move it. `day` is 00:00-24:00. A
+range that will not fit is kept, not squeezed - the column clips at the
+bottom and the surplus becomes "+N more".
 
 `GRID_BUDGET_H` is a px budget, not the height: `HOUR_H` is that budget
 divided by the hours on the axis, clamped to `HOUR_H_MIN..HOUR_H_MAX`,
@@ -49,18 +55,23 @@ overflowed the panel, and TRMNL centres an overflowing view, so the day
 headers went off the top. `scripts/check.sh` now reads `data-grid-h` back
 out of the built HTML and fails if it exceeds the layout's budget.
 
-An event is drawn the way the native plugin draws it: a filled block
-spanning its duration with the text inside, one line ("time - title")
-when short and two (time, then title) when it is tall enough for both.
-`MIN_BLOCK_H` keeps a 15-minute event legible rather than an 8px sliver.
+**Readability decides the geometry.** A block is at least as tall as its
+text — one line when `start - end  Title` fits `ONE_LINE_CHARS`, two
+otherwise — grows to its duration, and stops at `MAX_BLOCK_H` so one
+nine-hour event cannot push the day off the bottom. A block that would
+collide slides DOWN. So blocks never overlap, always have the full column
+width, and a title is shortened only when the title alone exceeds
+`TITLE_CHARS`. What no longer fits becomes "+N more" rather than smaller
+type. There are no lanes: two lanes in a 253px column left 197px, which
+is where truncated titles came from.
 
-Overlapping events are laned by an interval sweep — each takes the lowest
-lane free at its start — and `MAX_LANES` (2, or 1 on the quadrant) caps
-what is drawn, with the rest counted into a "+N" marker. Text stacking is
-separate from laning: `lane_free` is a COLUMN-wide next-free-y per lane,
-so consecutive entries push down instead of overprinting. Do not reset it
-at a cluster boundary, and do not clamp a bar taller than its duration —
-both were bugs that the geometry check now catches.
+**Crispness.** The panel dithers anything that is not one of its four
+inks, and a dither reads as fuzz. So: no grey tokens, no opacity, no
+half-tone fill anywhere (a weekend is a heavier column rule, never a
+shaded column); block text is black or white only; hour rules and column
+edges land on whole pixels, which is why `AXIS_W` is chosen to divide the
+panel exactly and `HOUR_H` is an integer quotient. `check.sh` greps the
+built HTML for every one of those.
 
 ## Commands
 
