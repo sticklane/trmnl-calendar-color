@@ -38,7 +38,7 @@ for layout in full half_horizontal half_vertical quadrant; do
     # Block geometry lives in a generated stylesheet, one rule per block:
     # trmnlp's lint scans the markup for CSS property names and allows six
     # across the four layouts, so it cannot go in style attributes.
-    grep -qE '\.cg-b[0-9]+\{top:[0-9]+px;height:[0-9]+px\}' "$out" || { echo "FAIL: $out blocks are not time-positioned"; exit 1; }
+    grep -qE '\.cg-b[0-9]+\{top:[0-9]+px;height:[0-9]+px;left:[0-9]+px\}' "$out" || { echo "FAIL: $out blocks are not time-positioned"; exit 1; }
     [ "$(grep -oE 'top:[0-9]+px;height:[0-9]+px' "$out" | sort -u | wc -l | tr -d ' ')" -ge 3 ] || {
         echo "FAIL: $out blocks all share one geometry"; exit 1; }
 

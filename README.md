@@ -95,7 +95,7 @@ mapping is visible on the panel itself.
 
 `scripts/gen_layouts.py` holds the table: `NUM_DAYS`, `PANEL_W`,
 `AXIS_W`, `GRID_BUDGET_H`, `HOUR_H_MAX`, `HOUR_EVERY`, `ONE_LINE_CHARS`,
-`TITLE_CHARS`, `MAX_BLOCK_H`, `SHOW_LEGEND`, plus `PANEL_H`, `HEAD_H`
+`TITLE_CHARS`, `INDENT_W`, `SHOW_LEGEND`, plus `PANEL_H`, `HEAD_H`
 and `TITLE_H`, which the grid's height budget is derived from. Edit that
 table or `scripts/layout_body.liquid`, then run the script.
 

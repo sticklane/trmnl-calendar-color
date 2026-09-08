@@ -20,7 +20,7 @@ only render them.
 | `.trmnlp.yml` | local-preview fixture that stands in for the merge variable |
 | `bin/trmnlp` | gem-or-Docker wrapper for the `trmnlp` CLI |
 | `scripts/check.sh` | the canonical check |
-| `scripts/geometry_check.py` | asserts every block holds its full text and nothing overlaps |
+| `scripts/geometry_check.py` | asserts every block sits at its clock position, holds its full text, and covers no other text |
 | `reference/native-3day/` | what the native render exposes, and the settings it came from |
 
 The framework title bar is gone: it spent ~44px on a name and an icon.
@@ -72,15 +72,32 @@ overflowed the panel, and TRMNL centres an overflowing view, so the day
 headers went off the top. `scripts/check.sh` now reads `data-grid-h` back
 out of the built HTML and fails if it exceeds the layout's budget.
 
-**Readability decides the geometry.** A block is at least as tall as its
-text — one line when `start - end  Title` fits `ONE_LINE_CHARS`, two
-otherwise — grows to its duration, and stops at `MAX_BLOCK_H` so one
-nine-hour event cannot push the day off the bottom. A block that would
-collide slides DOWN. So blocks never overlap, always have the full column
-width, and a title is shortened only when the title alone exceeds
-`TITLE_CHARS`. What no longer fits becomes "+N more" rather than smaller
-type. There are no lanes: two lanes in a 253px column left 197px, which
-is where truncated titles came from.
+**Placement follows the native render.** Every block sits at its clock
+position and spans its whole duration. A block that starts before an
+earlier block ends, by the clock, is nested: it is indented `INDENT_W`
+per such block, up to `MAX_DEPTH` steps, and painted over it, because
+later blocks come later in the column. That is how the native 3 Day
+Week render cascades overlapping events (`reference/native-3day/NOTES.md`).
+Depth counts clock overlap, not box overlap, so a block drawn taller
+than its minutes to hold its text does not turn the back-to-back block
+after it into a nested one. The earlier model, which slid a colliding
+block DOWN to the next free pixel, lost the clock: nine events inside
+one 7:30-4:30 "Busy" landed hours late.
+
+**One rule is ours: no block covers another block's text.** A block
+starts no higher than the text bottom of any drawn box that reaches
+below its clock top. Two events that start at the same minute therefore
+sit one line apart instead of on top of each other, and a burst of
+short events chains down by one line each. The native render paints
+them over each other and loses the covered text.
+
+**Readability still decides the height and the width.** A block is at
+least as tall as its text: one line when `Title  start-end` fits the
+width left after the indent, two otherwise. A title is shortened only
+when the title alone exceeds that width. Each indent step costs
+`INDENT_CHARS`, derived from `INDENT_W` and the 6.65px character. What
+no longer fits above the fold becomes "+N more" rather than smaller
+type.
 
 **Text.** The title leads: `Title  h:mm-h:mm` on one line when it fits,
 otherwise the title on line one and the times on line two. When the

@@ -1,9 +1,14 @@
-"""Readability invariants for the rendered grid.
+"""Placement and readability invariants for the rendered grid.
 
-The layout is text-first: a block is never smaller than the text it
-carries, blocks slide down instead of overlapping, and the only thing
-ever shortened is a title longer than the column can hold. These checks
-falsify each of those claims against the .trmnlp.yml fixture.
+Placement follows the native 3 Day Week render: every block sits at its
+clock position, a block that starts before an earlier block ends (by the
+clock) is indented one step per such block and painted over it, and a
+block spans its whole duration. One rule is ours: no block covers another
+block's text, so it starts no higher than the text bottom of any drawn
+box that reaches below its clock top. Text is still the
+constraint: a block is never smaller than the text it carries, and the
+only thing ever shortened is a title longer than its width can hold.
+These checks falsify each of those claims against the .trmnlp.yml fixture.
 """
 import html, pathlib, re, sys, yaml
 
@@ -16,7 +21,8 @@ TODAY = NODE['today_in_tz'].split('T')[0]
 
 SPAN = re.compile(r'<span class="label label--small cg-line[^"]*">(.*?)</span>', re.S)
 BLOCK = re.compile(
-    r'<div class="cg-block[^"]*"[^>]*data-block="([\d,]+)" data-form="(\d)" '
+    r'<div class="cg-block[^"]*"[^>]*data-block="([\d,]+)" data-clock="([\d,]+)" '
+    r'data-tc="(\d+)" data-form="(\d)" '
     r'data-times="([^"]*)" data-title="([^"]*)">(.*?)</div>', re.S)
 
 
@@ -100,18 +106,30 @@ for f in sorted((ROOT / '_build').glob('*.html')):
         if y2 - y1 < line_h:
             fail.append(f'{name}: hour labels {y1}px and {y2}px are closer than one line')
 
-    drawn_titles, more_total = set(), 0
+    axis_start, axis_end = got
+    span_min = (axis_end - axis_start) * 60
+    indent_w = int(re.search(r'data-indent-w="(\d+)"', h).group(1))
+    max_depth = int(re.search(r'data-max-depth="(\d+)"', h).group(1))
+
+    def clock_px(mins):
+        mins = min(max(mins, axis_start * 60), axis_end * 60)
+        return (mins - axis_start * 60) * grid_h // span_min
+
+    drawn, more_total = set(), 0
     cols = re.split(r'<div class="cg-col[^"]*" data-grid-col="', h)[1:]
     if not cols:
         fail.append(f'{name}: no grid columns')
     for chunk in cols:
         day = chunk.split('"', 1)[0]
-        spans = []
-        for geom, form, dtimes, dtitle, inner in BLOCK.findall(chunk):
+        placed = []   # (top, bottom, text_bottom, clock_bottom) per block drawn so far
+        for geom, clock, tc, form, dtimes, dtitle, inner in BLOCK.findall(chunk):
             top, hgt, left, lines, line_h = (int(x) for x in geom.split(','))
-            need = lines * line_h + 2
-            if need > hgt:
-                fail.append(f'{name} {day}: {lines} line(s) need {need}px, block is {hgt}px')
+            ctop, cbot = (int(x) for x in clock.split(','))
+            tc = int(tc)
+            bottom = top + hgt
+            text_h = lines * line_h + 2
+            if text_h > hgt:
+                fail.append(f'{name} {day}: {lines} line(s) need {text_h}px, block is {hgt}px')
             if line_h < 10:
                 fail.append(f'{name} {day}: line height {line_h}px is below the 10px floor')
             rendered = flat(' '.join(SPAN.findall(inner)))
@@ -123,21 +141,52 @@ for f in sorted((ROOT / '_build').glob('*.html')):
                 fail.append(f'{name} {day}: rendered {rendered!r} != {want!r}')
             if not rendered.startswith(title):
                 fail.append(f'{name} {day}: {rendered!r} does not lead with its title')
-            if title.endswith('...') and len(title) != title_chars:
-                fail.append(f'{name} {day}: title {title!r} shortened below the column width')
-            if title not in EXPECTED_TITLES.get(title_chars, {}):
+            if tc > title_chars:
+                fail.append(f'{name} {day}: {title!r} claims {tc} chars, wider than the column')
+            if title.endswith('...') and len(title) != tc:
+                fail.append(f'{name} {day}: title {title!r} shortened below its {tc}-char width')
+            ev = EXPECTED_TITLES.get(tc, {}).get(title)
+            if ev is None:
                 fail.append(f'{name} {day}: title {title!r} is not any fixture event, in full')
-            drawn_titles.add(title)
-            spans.append((top, top + hgt, want))
-        spans.sort()
-        for (t1, b1, w1), (t2, b2, w2) in zip(spans, spans[1:]):
-            if t2 < b1:
-                fail.append(f'{name} {day}: {w1!r} and {w2!r} overlap ({t1}-{b1} vs {t2}-{b2})')
+            else:
+                drawn.add(ev['summary'])
+                s = minutes(ev['start_full'])
+                e = minutes(ev['end_full']) if ev.get('end_full') else s + 60
+                if e <= s:
+                    e = s + 30
+                if (ctop, cbot) != (clock_px(s), clock_px(e)):
+                    fail.append(f'{name} {day}: {want!r} claims clock {ctop}-{cbot}px, '
+                                f'the fixture says {clock_px(s)}-{clock_px(e)}px')
+
+            # Native placement: the block sits at its clock top and spans
+            # its whole duration ...
+            depth = sum(1 for _, _, _, cb in placed if cb > ctop)
+            if top < ctop:
+                fail.append(f'{name} {day}: {want!r} drawn at {top}px, above its clock top {ctop}px')
+            if bottom < cbot:
+                fail.append(f'{name} {day}: {want!r} ends at {bottom}px, before its clock end {cbot}px')
+            if bottom > grid_h:
+                fail.append(f'{name} {day}: {want!r} runs to {bottom}px, past the {grid_h}px grid')
+            # ... indented one step per earlier block still running, by the clock ...
+            want_left = min(depth, max_depth) * indent_w
+            if left != want_left:
+                fail.append(f'{name} {day}: {want!r} nests {depth} deep but is indented '
+                            f'{left}px, want {want_left}px')
+            # ... and moves down ONLY to clear text it would have covered, never further.
+            floor = max((tb for _, b, tb, _ in placed if b > ctop), default=0)
+            if top != max(ctop, floor):
+                fail.append(f'{name} {day}: {want!r} drawn at {top}px; clock top {ctop}px, '
+                            f'parent text ends {floor}px')
+            for t, b, tb, _ in placed:
+                if top < tb and bottom > t:
+                    fail.append(f'{name} {day}: {want!r} ({top}-{bottom}) covers the text of the '
+                                f'block at {t}-{tb}')
+            placed.append((top, bottom, top + text_h, cbot))
         for n in re.findall(r'data-more="(\d+)"', chunk):
             more_total += int(n)
 
-    if len(drawn_titles) < 4:
-        fail.append(f'{name}: only {len(drawn_titles)} distinct blocks drawn')
+    if len(drawn) < 4:
+        fail.append(f'{name}: only {len(drawn)} distinct blocks drawn')
 
     # Every timed fixture event inside the window is either drawn in full
     # or counted into a "+N more".
@@ -147,7 +196,7 @@ for f in sorted((ROOT / '_build').glob('*.html')):
             continue
         if ev['start_full'].split('T')[0] not in window:
             continue
-        if truncate(ev['summary'], title_chars) not in drawn_titles:
+        if ev['summary'] not in drawn:
             missing.append(ev['summary'])
     if len(missing) > more_total:
         fail.append(f'{name}: {len(missing)} events absent but only +{more_total} counted: '
@@ -156,4 +205,4 @@ for f in sorted((ROOT / '_build').glob('*.html')):
 if fail:
     print('\n'.join(sorted(set(fail))[:12]))
     sys.exit(1)
-print('geometry OK: every block holds its full text, nothing overlaps, nothing is clipped')
+print('geometry OK: every block sits at its clock position, holds its full text, and covers no other text')
