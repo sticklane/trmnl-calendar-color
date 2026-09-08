@@ -21,7 +21,7 @@ custom_fields: {}
 variables:
   google_calendar_12345:
     instance_name: Calendar
-    today_in_tz: '2026-09-07'
+    today_in_tz: '2026-09-07T00:00:00.000-05:00'
     calendar_names:
       you@gmail.com: Personal
       work@google.com: Work

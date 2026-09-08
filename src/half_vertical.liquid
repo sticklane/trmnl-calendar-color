@@ -39,7 +39,7 @@
 {%- comment -%} ---- derived: resolve one token + glyph per calendar, once ---- {%- endcomment -%}
 {%- assign events = src.events -%}
 {%- assign names = src.calendar_names -%}
-{%- assign today = src.today_in_tz -%}
+{%- assign today = src.today_in_tz | split: "T" | first -%}
 {%- assign cals = events | map: "calname" | uniq -%}
 
 {%- assign mapped = "" -%}

@@ -18,6 +18,10 @@ for layout in full half_horizontal half_vertical quadrant; do
         exit 1
     fi
     grep -q 'group-header' "$out" || { echo "FAIL: $out rendered no day headers"; exit 1; }
+    # today_in_tz arrives as a full ISO timestamp from the live merge
+    # variable, so the day-key comparison has to normalize it. Without
+    # that, the Today highlight silently never fires.
+    grep -q 'Today ·' "$out" || { echo "FAIL: $out rendered no Today header"; exit 1; }
 done
 
 echo "OK: lint clean, 4 layouts rendered from the .trmnlp.yml fixture"
