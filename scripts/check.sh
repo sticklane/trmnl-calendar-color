@@ -48,6 +48,19 @@ for layout in full half_horizontal half_vertical quadrant; do
         grep -qE 'left:(22|44)%' "$out" || { echo "FAIL: $out never cascades a second lane"; exit 1; }
     fi
 
+    # The grid must fit the panel. TRMNL centres an overflowing view, so
+    # a grid taller than its budget loses the day-header row off the top
+    # rather than clipping at the bottom the way the native render does.
+    case "$layout" in
+        full)            budget=376 ;;
+        half_horizontal) budget=160 ;;
+        half_vertical)   budget=376 ;;
+        quadrant)        budget=152 ;;
+    esac
+    gh=$(grep -o 'data-grid-h="[0-9]*"' "$out" | head -1 | grep -o '[0-9]*')
+    [ -n "$gh" ] || { echo "FAIL: $out does not report its grid height"; exit 1; }
+    [ "$gh" -le "$budget" ] || { echo "FAIL: $out grid is ${gh}px, budget ${budget}px - the header row will be clipped"; exit 1; }
+
     # The window is today..today+N; anything outside it must not render.
     if grep -q 'should not render' "$out"; then
         echo "FAIL: $out shows an event outside the day window"; exit 1

@@ -48,8 +48,11 @@
                                       {%- comment -%} fills that need dark text. Mid greys dither on a
                                           1-bit panel, where white text disappears into the pattern. {%- endcomment -%}
 {%- assign LINE_H = 12 -%}            {%- comment -%} one line of block text {%- endcomment -%}
-{%- assign HOUR_H = 24 -%}            {%- comment -%} px per hour. Two lines per hour, so a 30-minute
-                                          block still clears one line of text. {%- endcomment -%}
+{%- assign GRID_BUDGET_H = 376 -%}  {%- comment -%} px the grid may occupy: panel height less the
+                                          day headers, the all-day band and the title bar {%- endcomment -%}
+{%- assign HOUR_H_MAX = 24 -%}        {%- comment -%} px per hour ceiling. Two lines per hour, so a
+                                          30-minute block still clears one line of text {%- endcomment -%}
+{%- assign HOUR_H_MIN = 9 -%}         {%- comment -%} floor; below it the hour rules stop reading {%- endcomment -%}
 {%- assign LANE_OFFSET = 22 -%}       {%- comment -%} % each lane is nudged right; blocks overlay rather
                                           than divide the width, the way the native render does {%- endcomment -%}
 {%- assign MAX_LANES = 3 -%}          {%- comment -%} lane 2 still leaves 56% width {%- endcomment -%}
@@ -125,6 +128,17 @@
 {%- assign END_MIN = GRID_END_H | times: 60 -%}
 {%- assign SPAN_MIN = END_MIN | minus: START_MIN -%}
 {%- assign HOURS = GRID_END_H | minus: GRID_START_H -%}
+{%- comment -%}
+  HOUR_H is a quotient, never a constant. TRMNL centres a view that
+  overflows its panel, so a grid taller than GRID_BUDGET_H does not clip
+  at the bottom the way the native render does - it loses the day-header
+  row off the TOP. Dividing the budget by the hours actually on the axis
+  keeps the header on screen whichever range was chosen, and HOUR_H_MAX
+  stops a short axis from stretching into fat, mostly empty rows.
+{%- endcomment -%}
+{%- assign HOUR_H = GRID_BUDGET_H | divided_by: HOURS -%}
+{%- if HOUR_H > HOUR_H_MAX -%}{%- assign HOUR_H = HOUR_H_MAX -%}{%- endif -%}
+{%- if HOUR_H < HOUR_H_MIN -%}{%- assign HOUR_H = HOUR_H_MIN -%}{%- endif -%}
 {%- assign GRID_H = HOUR_H | times: HOURS -%}
 
 <style>
@@ -174,7 +188,7 @@
 
 <div class="view view--{{ VIEW }}">
   <div class="layout">
-    <div class="cg-wrap" style="--cg-axis-w:{{ AXIS_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px">
+    <div class="cg-wrap" data-grid-h="{{ GRID_H }}" data-hour-h="{{ HOUR_H }}" style="--cg-axis-w:{{ AXIS_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px">
 
       {%- comment -%} ---------- day header row ---------- {%- endcomment -%}
       <div class="cg-row cg-row--head">
