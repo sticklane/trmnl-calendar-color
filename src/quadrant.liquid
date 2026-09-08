@@ -47,7 +47,9 @@
 {%- assign EMPTY_START_H = 8 -%}
 {%- assign EMPTY_END_H = 18 -%}
 {%- assign LINE_H = 12 -%}
-{%- assign CHAR_W100 = 665 -%}   {%- comment -%} hundredths of a px per character of the 12px face, measured live {%- endcomment -%}
+{%- assign TIGHT_LINE_H = 10 -%}   {%- comment -%} the smaller line a block drops to when its text does not fit its minutes {%- endcomment -%}
+{%- assign CHAR_W100 = 712 -%}   {%- comment -%} hundredths of a px per character of the BOLD 12px face: 6.72
+                                      measured in the live preview, plus the margin the regular face had {%- endcomment -%}
 {%- assign MAX_DEPTH = 4 -%}     {%- comment -%} nesting steps a block is indented for; deeper ones share the last step {%- endcomment -%}
 {%- assign MIN_AXIS_DUR = 5 -%}   {%- comment -%} minutes: shorter than this and the event does not move the axis {%- endcomment -%}
 
@@ -62,8 +64,6 @@
 {%- assign HEAD_H = 18 -%}          {%- comment -%} day-header row, measured in the rendered preview {%- endcomment -%}
 {%- assign HOUR_H_MAX = 15 -%}         {%- comment -%} px per hour ceiling {%- endcomment -%}
 {%- assign HOUR_EVERY = 3 -%}         {%- comment -%} label every Nth hour {%- endcomment -%}
-{%- assign ONE_LINE_CHARS = 25 -%}   {%- comment -%} "start - end  Title" that fits the column on one line {%- endcomment -%}
-{%- assign TITLE_CHARS = 24 -%}       {%- comment -%} a title longer than this is the only thing ever truncated {%- endcomment -%}
 {%- assign INDENT_W = 16 -%}         {%- comment -%} px a nested block steps right per open block above it {%- endcomment -%}
 {%- assign SHOW_LEGEND = false -%}
 
@@ -99,6 +99,13 @@
 {%- assign last_day = today_ts | plus: last_off | date: "%Y-%m-%d" -%}
 {%- assign cals = events | map: "calname" | uniq -%}
 {%- assign COL_W = PANEL_W | minus: AXIS_W | divided_by: NUM_DAYS -%}
+{%- comment -%}
+  Character budgets follow the column: how many of the measured characters
+  fit across it, less two for the block's borders. "Title  start-end" on
+  one line, and the longest title that is never shortened.
+{%- endcomment -%}
+{%- assign ONE_LINE_CHARS = COL_W | times: 100 | divided_by: CHAR_W100 | minus: 2 -%}
+{%- assign TITLE_CHARS = ONE_LINE_CHARS | minus: 1 -%}
 
 {%- comment -%} one fill token, and one contrasting text colour, per calendar {%- endcomment -%}
 {%- assign tokens_s = "" -%}
@@ -241,6 +248,7 @@
 {%- assign ONE_LINE_H = LINE_H | plus: 2 -%}
 {%- assign TWO_LINE_H = LINE_H | times: 2 | plus: 2 -%}
 {%- assign INDENT_CHARS = INDENT_W | times: 100 | plus: CHAR_W100 | minus: 1 | divided_by: CHAR_W100 -%}
+{%- assign TIGHT_CHAR_W100 = CHAR_W100 | times: TIGHT_LINE_H | divided_by: LINE_H -%}
 
 <style>
   /* Framework utility classes carry spacing, alignment and every fill.
@@ -285,10 +293,16 @@
     position: absolute; box-sizing: border-box; overflow: hidden;
     border: 1px solid #fff; right: 0;
   }
+  /* --ui-scale:0 zeroes the 3px of vertical spacing the framework gives
+     label--small, which a block sized to its line cannot spare. */
   .cg-line {
-    display: block; white-space: nowrap; overflow: hidden;
-    text-overflow: ellipsis; line-height: var(--cg-line-h);
+    display: block; white-space: nowrap; overflow: hidden; font-weight: bold;
+    text-overflow: ellipsis; line-height: var(--cg-line-h); --ui-scale: 0;
   }
+  /* Small event, small text: the 12px bitmap face scaled to TIGHT_LINE_H.
+     The shorthand is deliberate - it names no property the lint scans. */
+  .cg-block--tight { --cg-line-h: {{ TIGHT_LINE_H }}px; }
+  .cg-block--tight .cg-line { font: bold {{ TIGHT_LINE_H }}px/{{ TIGHT_LINE_H }}px var(--label-small-font-family); }
   .cg-adbar { overflow: hidden; border: 1px solid #fff; }
   .cg-swatch { display: inline-block; width: 8px; height: 8px; }
   .cg-legend { align-items: center; height: var(--cg-legend-h); }
@@ -298,7 +312,7 @@
 
 <div class="view view--{{ VIEW }}">
   <div class="layout">
-    <div class="cg-wrap" data-grid-h="{{ GRID_H }}" data-hour-h="{{ HOUR_H }}" data-axis-mode="{{ AXIS_MODE }}" data-axis-start="{{ GRID_START_H }}" data-axis-end="{{ GRID_END_H }}" data-title-chars="{{ TITLE_CHARS }}" data-panel-h="{{ PANEL_H }}" data-panel-w="{{ PANEL_W }}" data-content-w="{{ COL_W | times: NUM_DAYS | plus: AXIS_W }}" data-line-h="{{ LINE_H }}" data-indent-w="{{ INDENT_W }}" data-max-depth="{{ MAX_DEPTH }}" data-total-h="{{ HEAD_H | plus: AD_H | plus: GRID_H | plus: LEGEND_H }}" style="--cg-axis-w:{{ AXIS_W }}px;--cg-col-w:{{ COL_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px;--cg-legend-h:{{ LEGEND_H }}px">
+    <div class="cg-wrap" data-grid-h="{{ GRID_H }}" data-hour-h="{{ HOUR_H }}" data-axis-mode="{{ AXIS_MODE }}" data-axis-start="{{ GRID_START_H }}" data-axis-end="{{ GRID_END_H }}" data-title-chars="{{ TITLE_CHARS }}" data-panel-h="{{ PANEL_H }}" data-panel-w="{{ PANEL_W }}" data-content-w="{{ COL_W | times: NUM_DAYS | plus: AXIS_W }}" data-line-h="{{ LINE_H }}" data-tight-line-h="{{ TIGHT_LINE_H }}" data-indent-w="{{ INDENT_W }}" data-max-depth="{{ MAX_DEPTH }}" data-total-h="{{ HEAD_H | plus: AD_H | plus: GRID_H | plus: LEGEND_H }}" style="--cg-axis-w:{{ AXIS_W }}px;--cg-col-w:{{ COL_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px;--cg-legend-h:{{ LEGEND_H }}px">
 
       {%- comment -%} ---------- day header row ---------- {%- endcomment -%}
       <div class="cg-row cg-row--head">
@@ -473,17 +487,38 @@
                 itself is shortened only when the title ALONE is wider than
                 the width left after the indent.
               {%- endcomment -%}
+              {%- assign lh = LINE_H -%}
               {%- assign title = ev.summary | truncate: title_chars -%}
               {%- assign times = ev.start | append: "-" | append: ev.end -%}
               {%- assign one = title | append: "  " | append: times -%}
-              {%- if one.size <= one_chars -%}
-                {%- assign form = 1 -%}{%- assign lines = 1 -%}{%- assign text_h = ONE_LINE_H -%}
-              {%- else -%}
-                {%- assign form = 2 -%}{%- assign lines = 2 -%}{%- assign text_h = TWO_LINE_H -%}
+              {%- if one.size <= one_chars -%}{%- assign lines = 1 -%}{%- else -%}{%- assign lines = 2 -%}{%- endif -%}
+              {%- assign text_h = lines | times: lh | plus: 2 -%}
+              {%- comment -%}
+                A small event gets small text. When the text does not fit
+                inside the event's own minutes at the 12px face, the block
+                drops to the TIGHT_LINE_H face and re-fits: the smaller
+                glyphs carry more characters per line, so a title that
+                needed two lines may need one. The block still never
+                shrinks below its text, so a very short event stays a
+                little taller than its minutes, in small type.
+              {%- endcomment -%}
+              {%- assign dur_h = cbot | minus: ctop -%}
+              {%- if text_h > dur_h -%}
+                {%- assign lh = TIGHT_LINE_H -%}
+                {%- assign lost = indent | times: INDENT_W | times: 100 | plus: TIGHT_CHAR_W100 | minus: 1 | divided_by: TIGHT_CHAR_W100 -%}
+                {%- assign one_chars = ONE_LINE_CHARS | times: CHAR_W100 | divided_by: TIGHT_CHAR_W100 | minus: lost -%}
+                {%- assign title_chars = TITLE_CHARS | times: CHAR_W100 | divided_by: TIGHT_CHAR_W100 | minus: lost -%}
+                {%- assign title = ev.summary | truncate: title_chars -%}
+                {%- assign one = title | append: "  " | append: times -%}
+                {%- if one.size <= one_chars -%}{%- assign lines = 1 -%}{%- else -%}{%- assign lines = 2 -%}{%- endif -%}
+                {%- assign text_h = lines | times: lh | plus: 2 -%}
               {%- endif -%}
+              {%- assign form = lines -%}
+              {%- assign one_h = lh | plus: 2 -%}
+              {%- assign two_h = lh | times: 2 | plus: 2 -%}
               {%- assign room = GRID_H | minus: top -%}
-              {%- if form == 2 and room < TWO_LINE_H and room >= ONE_LINE_H -%}
-                {%- assign form = 3 -%}{%- assign lines = 1 -%}{%- assign text_h = ONE_LINE_H -%}
+              {%- if form == 2 and room < two_h and room >= one_h -%}
+                {%- assign form = 3 -%}{%- assign lines = 1 -%}{%- assign text_h = one_h -%}
               {%- endif -%}
 
               {%- assign hgt = cbot | minus: top -%}
@@ -499,7 +534,7 @@
               {%- assign txt = CAL_TEXTS[ci] -%}
               {%- assign bi = bi | plus: 1 -%}
               {%- assign block_css = block_css | append: ".cg-b" | append: bi | append: "{top:" | append: top | append: "px;height:" | append: hgt | append: "px;left:" | append: left | append: "px}" -%}
-              <div class="cg-block cg-b{{ bi }} bg--{{ token }}" data-block="{{ top }},{{ hgt }},{{ left }},{{ lines }},{{ LINE_H }}" data-clock="{{ ctop }},{{ cbot }}" data-tc="{{ title_chars }}" data-form="{{ form }}" data-times="{{ times }}" data-title="{{ title | escape }}">
+              <div class="cg-block cg-b{{ bi }} bg--{{ token }}{% if lh < LINE_H %} cg-block--tight{% endif %}" data-block="{{ top }},{{ hgt }},{{ left }},{{ lines }},{{ lh }}" data-clock="{{ ctop }},{{ cbot }}" data-tc="{{ title_chars }}" data-form="{{ form }}" data-times="{{ times }}" data-title="{{ title | escape }}">
                 {%- if form == 2 -%}
                   <span class="label label--small cg-line text--{{ txt }}">{{ title }}</span>
                   <span class="label label--small cg-line text--{{ txt }}">{{ times }}</span>

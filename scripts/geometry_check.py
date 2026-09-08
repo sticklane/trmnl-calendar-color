@@ -91,6 +91,7 @@ for f in sorted((ROOT / '_build').glob('*.html')):
     hours = [a for a, _ in labels]
     grid_h = int(re.search(r'data-grid-h="(\d+)"', h).group(1))
     line_h = int(re.search(r'data-line-h="(\d+)"', h).group(1))
+    line_h_full = line_h
     if hours and hours[0] != want[0]:
         fail.append(f'{name}: first hour label {hours[0]}, expected {want[0]}')
     # The window is a hard constraint: its END is labelled, inside the grid.
@@ -108,6 +109,7 @@ for f in sorted((ROOT / '_build').glob('*.html')):
 
     axis_start, axis_end = got
     span_min = (axis_end - axis_start) * 60
+    tight_h = int(re.search(r'data-tight-line-h="(\d+)"', h).group(1))
     indent_w = int(re.search(r'data-indent-w="(\d+)"', h).group(1))
     max_depth = int(re.search(r'data-max-depth="(\d+)"', h).group(1))
 
@@ -132,6 +134,14 @@ for f in sorted((ROOT / '_build').glob('*.html')):
                 fail.append(f'{name} {day}: {lines} line(s) need {text_h}px, block is {hgt}px')
             if line_h < 10:
                 fail.append(f'{name} {day}: line height {line_h}px is below the 10px floor')
+            # Small event, small text: the tight face appears only when the
+            # 12px text could not fit the event's minutes, and the 12px face
+            # only when it did.
+            dur_h = cbot - ctop
+            if line_h == tight_h and dur_h >= 2 * line_h_full + 2:
+                fail.append(f'{name} {day}: {dtitle!r} is in small type but its {dur_h}px would hold two 12px lines')
+            if line_h == line_h_full and text_h > dur_h:
+                fail.append(f'{name} {day}: {dtitle!r} is in 12px type ({text_h}px) but its event is only {dur_h}px')
             rendered = flat(' '.join(SPAN.findall(inner)))
             title = flat(dtitle)
             # The title leads and the times follow; form 3 has dropped the
@@ -141,8 +151,11 @@ for f in sorted((ROOT / '_build').glob('*.html')):
                 fail.append(f'{name} {day}: rendered {rendered!r} != {want!r}')
             if not rendered.startswith(title):
                 fail.append(f'{name} {day}: {rendered!r} does not lead with its title')
-            if tc > title_chars:
-                fail.append(f'{name} {day}: {title!r} claims {tc} chars, wider than the column')
+            # The small face carries more characters across the same width,
+            # by the same ratio the template uses (hundredths of a px).
+            max_tc = title_chars * 665 // (665 * line_h // line_h_full)
+            if tc > max_tc:
+                fail.append(f'{name} {day}: {title!r} claims {tc} chars, wider than the column ({max_tc})')
             if title.endswith('...') and len(title) != tc:
                 fail.append(f'{name} {day}: title {title!r} shortened below its {tc}-char width')
             ev = EXPECTED_TITLES.get(tc, {}).get(title)

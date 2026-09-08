@@ -27,17 +27,19 @@ SHARED = """{%- assign src = google_calendar_12345 -%}
 {%- assign EMPTY_START_H = 8 -%}
 {%- assign EMPTY_END_H = 18 -%}
 {%- assign LINE_H = 12 -%}
-{%- assign CHAR_W100 = 665 -%}   {%- comment -%} hundredths of a px per character of the 12px face, measured live {%- endcomment -%}
+{%- assign TIGHT_LINE_H = 10 -%}   {%- comment -%} the smaller line a block drops to when its text does not fit its minutes {%- endcomment -%}
+{%- assign CHAR_W100 = 712 -%}   {%- comment -%} hundredths of a px per character of the BOLD 12px face: 6.72
+                                      measured in the live preview, plus the margin the regular face had {%- endcomment -%}
 {%- assign MAX_DEPTH = 4 -%}     {%- comment -%} nesting steps a block is indented for; deeper ones share the last step {%- endcomment -%}
 {%- assign MIN_AXIS_DUR = 5 -%}   {%- comment -%} minutes: shorter than this and the event does not move the axis {%- endcomment -%}
 """
 
 LAYOUTS = {
-    # view              days panelW axis panelH head (unused) hmax every one_line title legend indent
-    'full':            (3, 780, 39, 460, 18, 44, 24, 1, 36, 35, 'true', 24),
-    'half_horizontal': (3, 780, 39, 220, 18, 36, 16, 3, 36, 35, 'true', 24),
-    'half_vertical':   (2, 380, 40, 460, 18, 44, 22, 2, 24, 23, 'false', 16),
-    'quadrant':        (2, 380, 34, 220, 18, 36, 15, 3, 25, 24, 'false', 16),
+    # view              days panelW axis panelH head (unused) hmax every legend indent
+    'full':            (3, 780, 39, 460, 18, 44, 24, 1, 'true', 24),
+    'half_horizontal': (3, 780, 39, 220, 18, 36, 16, 3, 'true', 24),
+    'half_vertical':   (2, 380, 40, 460, 18, 44, 22, 2, 'false', 16),
+    'quadrant':        (2, 380, 34, 220, 18, 36, 15, 3, 'false', 16),
 }
 
 HEAD = """{%- comment -%}
@@ -84,8 +86,6 @@ KNOBS = """{%- comment -%} ---- this layout ---- {%- endcomment -%}
 {%- assign HEAD_H = @HEADH@ -%}          {%- comment -%} day-header row, measured in the rendered preview {%- endcomment -%}
 {%- assign HOUR_H_MAX = @HMAX@ -%}         {%- comment -%} px per hour ceiling {%- endcomment -%}
 {%- assign HOUR_EVERY = @EVERY@ -%}         {%- comment -%} label every Nth hour {%- endcomment -%}
-{%- assign ONE_LINE_CHARS = @ONELINE@ -%}   {%- comment -%} "start - end  Title" that fits the column on one line {%- endcomment -%}
-{%- assign TITLE_CHARS = @TITLE@ -%}       {%- comment -%} a title longer than this is the only thing ever truncated {%- endcomment -%}
 {%- assign INDENT_W = @INDENT@ -%}         {%- comment -%} px a nested block steps right per open block above it {%- endcomment -%}
 {%- assign SHOW_LEGEND = @LEGEND@ -%}
 
@@ -93,11 +93,11 @@ KNOBS = """{%- comment -%} ---- this layout ---- {%- endcomment -%}
 
 def render(view):
     (days, panel, axis, panel_h, head_h, title_h, hmax, every,
-     one_line, title, legend, indent) = LAYOUTS[view]
+     legend, indent) = LAYOUTS[view]
     subs = {'@VIEW@': view, '@DAYS@': days, '@PANEL@': panel, '@AXIS@': axis,
             '@PANELH@': panel_h, '@HEADH@': head_h,
             '@HMAX@': hmax, '@EVERY@': every,
-            '@ONELINE@': one_line, '@TITLE@': title, '@LEGEND@': legend,
+            '@LEGEND@': legend,
             '@INDENT@': indent}
     out = HEAD + SHARED + '\n' + KNOBS + BODY
     for k, v in subs.items():

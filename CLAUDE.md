@@ -47,7 +47,8 @@ that each block's rendered spans equal that event's full
 `start - end  title`, that a title ending in an ellipsis was genuinely
 longer than its width, that each block sits at its clock top and covers
 its duration, that a nested block is indented one step per event still
-running, that no block covers another block's text, that
+running, that no block covers another block's text, that the 10px face
+appears only where 12px text could not fit the event's minutes, that
 every in-window fixture event is either drawn or counted into a
 "+N more", and that the hour range and its first and last labels match
 what `axis_mode` should have produced.

@@ -94,10 +94,20 @@ them over each other and loses the covered text.
 **Readability still decides the height and the width.** A block is at
 least as tall as its text: one line when `Title  start-end` fits the
 width left after the indent, two otherwise. A title is shortened only
-when the title alone exceeds that width. Each indent step costs
-`INDENT_CHARS`, derived from `INDENT_W` and the 6.65px character. What
-no longer fits above the fold becomes "+N more" rather than smaller
-type.
+when the title alone exceeds that width. `ONE_LINE_CHARS` and
+`TITLE_CHARS` are derived in the template from the column width and
+`CHAR_W100`, and each indent step costs `INDENT_CHARS` by the same
+measure. What no longer fits above the fold becomes "+N more" rather
+than smaller type.
+
+**Small event, small text.** When the text does not fit inside the
+event's own minutes at the 12px face, the block drops to `TIGHT_LINE_H`
+(10px) and re-fits. The smaller glyphs carry more characters per line,
+so a title that needed two lines may need one. The 10px face is the 12px
+bitmap scaled, because the framework has nothing smaller. It is set with
+the `font` shorthand, because `trmnlp lint` scans for the long property
+name. The block still never shrinks below its text, so a five-minute
+event stays 12px tall, in small type.
 
 **Text.** The title leads: `Title  h:mm-h:mm` on one line when it fits,
 otherwise the title on line one and the times on line two. When the
@@ -105,12 +115,16 @@ column has room for one more line but not two the TIMES are dropped - the
 title is shortened only when the title alone is wider than the column.
 
 The face is `label--small`, which is the framework's 12px pixel-hinted
-bitmap (TRMNL12, 12px line height, 6.65px per character, measured in the
-live preview). `label--xsmall` is an ALIAS of the 16px face (TRMNL16,
-8.5px per character), not a smaller size; nothing below 12px exists.
-At its native pixel size the face needs no scaling, so no glyph is
-anti-aliased. `ONE_LINE_CHARS` and `TITLE_CHARS` are derived from that
-6.65px measurement and the column width.
+bitmap (TRMNL12, 12px line height), in BOLD. Bold measures 6.72px per
+character in the live preview, against 6.28px for the regular weight.
+`CHAR_W100 = 712` is that 6.72px plus the margin the regular budget had.
+`label--xsmall` is an ALIAS of the 16px face (TRMNL16, 8.5px per
+character), not a smaller size. Nothing below 12px exists in the
+framework, so the small-event face is this one scaled to 10px. At its
+native pixel size the face needs no scaling, so no glyph is anti-aliased.
+`.cg-line` sets `--ui-scale: 0` to drop the 3px of vertical spacing the
+framework gives `label--small`, which a block sized to its line cannot
+spare.
 
 **Crispness.** The panel dithers anything that is not one of its four
 inks, and a dither reads as fuzz. So: no grey tokens, no opacity, no
