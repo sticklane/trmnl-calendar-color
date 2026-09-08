@@ -2,8 +2,10 @@
 =====================================================================
  Google Calendar fork — per-calendar color coding (TRMNL Plugin Merge)
  Layout: HALF_VERTICAL
- View:   3-day week — one column per day, matching the native plugin's
-         "3 Day Week" event layout rather than a day-grouped agenda.
+ View:   3 Day Week TIME GRID — hours down the left axis, one column
+         per day, every timed event a block positioned by start time
+         and sized by duration. Mirrors the native plugin's
+         "3 Day Week" layout, not an agenda list.
 =====================================================================
  SETUP
    1. Connect Google Calendar natively, pick your calendars, hide it in Playlists.
@@ -20,9 +22,9 @@
    hues collapse to their lightness -> keep grays FAR apart
    (black / gray-30 / gray-50 / gray-65) and use glyphs too.
 
- Event times come straight from ev.start / ev.end, which the native
- plugin has already formatted with its own time_format setting, so the
- clock style always matches the native instance without a knob here.
+ GRID_START_H / GRID_END_H mirror the native instance's scroll_time and
+ scroll_time_end. Event times print from ev.start / ev.end, which the
+ native plugin has already formatted with its own time_format.
 =====================================================================
 {%- endcomment -%}
 
@@ -30,19 +32,25 @@
 {%- assign CAL_MAP = "you@gmail.com=black,work@google.com=gray-40,abc123@group.calendar.google.com=gray-65" | split: "," -%}
 {%- assign FALLBACK = "black,gray-40,gray-65,gray-25,gray-55" | split: "," -%}
 {%- assign GLYPHS = "■,●,▲,◆,★,▼,♦,✚" | split: "," -%}
-{%- assign MODE = "both" -%}            {%- comment -%} bar | glyph | both {%- endcomment -%}
 {%- assign SHOW_LEGEND = false -%}
-{%- assign SHOW_TIME = true -%}
-{%- assign SHOW_DESC = false -%}
+{%- assign SHOW_ALLDAY = true -%}
 {%- assign NUM_DAYS = 2 -%}           {%- comment -%} day columns, starting today {%- endcomment -%}
-{%- assign DAY_FMT = "%a %-m/%-d" -%} {%- comment -%} localized short, e.g. Mon 9/8 {%- endcomment -%}
+{%- assign GRID_START_H = 5 -%}       {%- comment -%} native scroll_time 05:00 {%- endcomment -%}
+{%- assign GRID_END_H = 23 -%}        {%- comment -%} native scroll_time_end 23:00 {%- endcomment -%}
+{%- assign HOUR_H = 16 -%}            {%- comment -%} px per hour. Grid height is derived from it so the
+                                          hour rules, the axis cells and the block maths all land on the
+                                          same integer scale; a hand-set height that is not a multiple of
+                                          the hour count drifts the rules against the events. {%- endcomment -%}
+{%- assign HOUR_EVERY = 2 -%}         {%- comment -%} label every Nth hour {%- endcomment -%}
+{%- assign AXIS_W = 30 -%}
+{%- assign MIN_BLOCK_H = 9 -%}
+{%- assign TIME_BLOCK_H = 26 -%}      {%- comment -%} blocks shorter than this show title only {%- endcomment -%}
+{%- assign DAY_FMT = "%a %-m/%-d" -%} {%- comment -%} native date_format: short {%- endcomment -%}
 {%- assign HIGHLIGHT_TODAY = true -%}
 {%- assign SHADE_WEEKENDS = true -%}
-{%- assign MAX_PER_DAY = 5 -%}        {%- comment -%} 0 = uncapped {%- endcomment -%}
 {%- assign VIEW = "half_vertical" -%}          {%- comment -%} full | half_horizontal | half_vertical | quadrant {%- endcomment -%}
 {%- assign HEAD_SIZE = "small" -%}
-{%- assign TITLE_SIZE = "small" -%}
-{%- assign BAR_WIDTH = 8 -%}          {%- comment -%} px. OG 1-bit: keep >= 12 so dither patterns read {%- endcomment -%}
+{%- assign BAR_W = 4 -%}
 
 {%- comment -%} ---- derived: resolve one token + glyph per calendar, once ---- {%- endcomment -%}
 {%- assign events = src.events | sort: "start_full" -%}
@@ -50,6 +58,11 @@
 {%- assign today = src.today_in_tz | split: "T" | first -%}
 {%- assign today_ts = today | date: "%s" | times: 1 -%}
 {%- assign cals = events | map: "calname" | uniq -%}
+{%- assign START_MIN = GRID_START_H | times: 60 -%}
+{%- assign END_MIN = GRID_END_H | times: 60 -%}
+{%- assign SPAN_MIN = END_MIN | minus: START_MIN -%}
+{%- assign HOURS = GRID_END_H | minus: GRID_START_H -%}
+{%- assign GRID_H = HOUR_H | times: HOURS -%}
 
 {%- assign mapped = "" -%}
 {%- for pair in CAL_MAP -%}{%- assign kv = pair | split: "=" -%}{%- assign mapped = mapped | append: "|" | append: kv[1] | append: "|" -%}{%- endfor -%}
@@ -68,96 +81,219 @@
 {%- endfor -%}
 {%- assign CAL_TOKENS = tokens_s | split: "," -%}
 
+<style>
+  /* Framework utility classes carry padding, text alignment and fills so
+     this block stays clear of the properties trmnlp's lint counts. */
+  .cg-wrap { display: flex; flex-direction: column; width: 100%; }
+  .cg-row { display: flex; }
+  .cg-row--head { align-items: flex-end; }
+  .cg-axis { flex: 0 0 var(--cg-axis-w); width: var(--cg-axis-w); }
+  .cg-day { flex: 1 1 0; min-width: 0; }
+  .cg-allday { border-bottom: 1px solid currentColor; align-items: stretch; }
+  .cg-allday .cg-day { border-left: 1px solid currentColor; }
+  .cg-axis--label { display: flex; align-items: center; }
+  .cg-grid { display: flex; height: var(--cg-grid-h); flex: 0 0 var(--cg-grid-h); }
+  .cg-axis--hours { display: flex; flex-direction: column; }
+  /* Pinned, not flexed: a flex axis compresses when the view is shorter
+     than the grid, and then the labels no longer line up with the hour
+     rules, which are drawn at a fixed pixel pitch. */
+  .cg-hour { flex: 0 0 var(--cg-hour-h); height: var(--cg-hour-h); line-height: 1; }
+  .cg-col {
+    flex: 1 1 0; min-width: 0; position: relative;
+    border-left: 1px solid currentColor;
+    background-image: repeating-linear-gradient(
+      to bottom, #999 0, #999 1px, transparent 1px, transparent var(--cg-hour-h));
+  }
+  .cg-block { position: absolute; box-sizing: border-box; display: flex; overflow: hidden; }
+  .cg-bar { flex: 0 0 var(--cg-bar-w); width: var(--cg-bar-w); }
+  .cg-body {
+    flex: 1 1 auto; min-width: 0;
+    border: 1px solid currentColor; border-left: 0;
+    overflow: hidden; line-height: 1.05;
+  }
+  .cg-line { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cg-ad { display: flex; align-items: center; line-height: 1.1; }
+</style>
+
 <div class="view view--{{ VIEW }}">
   <div class="layout">
-    <div class="columns">
-      {%- for n in (1..NUM_DAYS) -%}
-        {%- assign offset = n | minus: 1 | times: 86400 -%}
-        {%- assign day_ts = today_ts | plus: offset -%}
-        {%- assign day_key = day_ts | date: "%Y-%m-%d" -%}
-        {%- assign day_label = day_ts | date: DAY_FMT -%}
-        {%- assign dow = day_ts | date: "%w" -%}
-        {%- assign weekend = false -%}
-        {%- if dow == "0" or dow == "6" -%}{%- assign weekend = true -%}{%- endif -%}
+    <div class="cg-wrap" style="--cg-axis-w:{{ AXIS_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-bar-w:{{ BAR_W }}px">
 
-        <div class="column" data-day-col="{{ day_key }}">
-          {%- if day_key == today and HIGHLIGHT_TODAY -%}
-            <span class="label label--{{ HEAD_SIZE }} label--filled" data-day-header="true">{{ day_label }}</span>
-          {%- elsif weekend and SHADE_WEEKENDS -%}
-            <span class="label label--{{ HEAD_SIZE }} label--underline text--gray-45" data-day-header="true">{{ day_label }}</span>
-          {%- else -%}
-            <span class="label label--{{ HEAD_SIZE }}" data-day-header="true">{{ day_label }}</span>
-          {%- endif -%}
+      {%- comment -%} ---------- day header row ---------- {%- endcomment -%}
+      <div class="cg-row cg-row--head">
+        <div class="cg-axis"></div>
+        {%- for n in (1..NUM_DAYS) -%}
+          {%- assign offset = n | minus: 1 | times: 86400 -%}
+          {%- assign day_ts = today_ts | plus: offset -%}
+          {%- assign day_key = day_ts | date: "%Y-%m-%d" -%}
+          {%- assign day_label = day_ts | date: DAY_FMT -%}
+          <div class="cg-day text--center px--1" data-day-col="{{ day_key }}">
+            {%- if day_key == today and HIGHLIGHT_TODAY -%}
+              <span class="label label--{{ HEAD_SIZE }} label--filled" data-day-header="true">{{ day_label }}</span>
+            {%- else -%}
+              <span class="label label--{{ HEAD_SIZE }}" data-day-header="true">{{ day_label }}</span>
+            {%- endif -%}
+          </div>
+        {%- endfor -%}
+      </div>
 
-          {%- comment -%}
-            All-day rows lead the column. A bare YYYY-MM-DD start_full
-            sorts ahead of the same day's timed events, so the global
-            sort already puts them first; this pass just keeps them
-            grouped when a multi-day event started on an earlier day.
-          {%- endcomment -%}
-          {%- assign shown = 0 -%}
-          {%- for pass in (1..2) -%}
-            {%- for ev in events -%}
-              {%- if MAX_PER_DAY > 0 and shown >= MAX_PER_DAY -%}{%- break -%}{%- endif -%}
-              {%- if pass == 1 and ev.all_day != true -%}{%- continue -%}{%- endif -%}
-              {%- if pass == 2 and ev.all_day -%}{%- continue -%}{%- endif -%}
-
-              {%- assign ev_start_day = ev.start_full | split: "T" | first -%}
-              {%- assign on_day = false -%}
-              {%- if ev.all_day -%}
-                {%- comment -%}
-                  Google's all-day end date is exclusive, so a one-day
-                  event has end == start + 1. Treat a missing or
-                  non-advancing end as a single day rather than dropping
-                  the event entirely.
-                {%- endcomment -%}
-                {%- assign ev_end_day = ev.end_full | split: "T" | first -%}
-                {%- if ev_end_day == blank or ev_end_day <= ev_start_day -%}
-                  {%- if day_key == ev_start_day -%}{%- assign on_day = true -%}{%- endif -%}
-                {%- elsif day_key >= ev_start_day and day_key < ev_end_day -%}
+      {%- comment -%} ---------- all-day band ---------- {%- endcomment -%}
+      {%- if SHOW_ALLDAY -%}
+        <div class="cg-row cg-allday">
+          <div class="cg-axis cg-axis--label">
+            <span class="label label--xsmall text--gray-45">all day</span>
+          </div>
+          {%- for n in (1..NUM_DAYS) -%}
+            {%- assign offset = n | minus: 1 | times: 86400 -%}
+            {%- assign day_ts = today_ts | plus: offset -%}
+            {%- assign day_key = day_ts | date: "%Y-%m-%d" -%}
+            <div class="cg-day px--1">
+              {%- for ev in events -%}
+                {%- unless ev.all_day -%}{%- continue -%}{%- endunless -%}
+                {%- assign ev_s = ev.start_full | split: "T" | first -%}
+                {%- assign ev_e = ev.end_full | split: "T" | first -%}
+                {%- assign on_day = false -%}
+                {%- if ev_e == blank or ev_e <= ev_s -%}
+                  {%- if day_key == ev_s -%}{%- assign on_day = true -%}{%- endif -%}
+                {%- elsif day_key >= ev_s and day_key < ev_e -%}
                   {%- assign on_day = true -%}
                 {%- endif -%}
-              {%- elsif day_key == ev_start_day -%}
-                {%- assign on_day = true -%}
+                {%- unless on_day -%}{%- continue -%}{%- endunless -%}
+                {%- assign ci = 0 -%}
+                {%- for c in cals -%}{%- if c == ev.calname -%}{%- assign ci = forloop.index0 -%}{%- break -%}{%- endif -%}{%- endfor -%}
+                {%- assign token = CAL_TOKENS[ci] -%}
+                {%- assign gi = ci | modulo: GLYPHS.size -%}
+                <div class="cg-ad gap--xsmall" data-allday="true">
+                  <span class="label label--xsmall text--{{ token }}">{{ GLYPHS[gi] }}</span>
+                  <span class="label label--xsmall cg-line">{{ ev.summary }}</span>
+                </div>
+              {%- endfor -%}
+            </div>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      {%- comment -%} ---------- hour grid ---------- {%- endcomment -%}
+      <div class="cg-row cg-grid">
+
+        {%- comment -%}
+          One flex cell per hour, so the labels line up with the
+          repeating-gradient rules on the columns without absolute
+          positioning or an opacity override.
+        {%- endcomment -%}
+        <div class="cg-axis cg-axis--hours">
+          {%- for h in (GRID_START_H..GRID_END_H) -%}
+            {%- if forloop.last -%}{%- break -%}{%- endif -%}
+            {%- assign hoff = h | minus: GRID_START_H -%}
+            {%- assign hmod = hoff | modulo: HOUR_EVERY -%}
+            <div class="cg-hour text--right px--1">
+              {%- if hmod == 0 -%}
+                {%- assign h12 = h | modulo: 12 -%}
+                {%- if h12 == 0 -%}{%- assign h12 = 12 -%}{%- endif -%}
+                {%- if h < 12 -%}{%- assign ap = "am" -%}{%- else -%}{%- assign ap = "pm" -%}{%- endif -%}
+                <span class="label label--xsmall text--gray-45" data-hour="{{ h }}">{{ h12 }}{{ ap }}</span>
               {%- endif -%}
-              {%- unless on_day -%}{%- continue -%}{%- endunless -%}
+            </div>
+          {%- endfor -%}
+        </div>
+
+        {%- for n in (1..NUM_DAYS) -%}
+          {%- assign offset = n | minus: 1 | times: 86400 -%}
+          {%- assign day_ts = today_ts | plus: offset -%}
+          {%- assign day_key = day_ts | date: "%Y-%m-%d" -%}
+          {%- assign dow = day_ts | date: "%w" -%}
+          {%- assign weekend = false -%}
+          {%- if dow == "0" or dow == "6" -%}{%- assign weekend = true -%}{%- endif -%}
+
+          {%- comment -%}
+            Pass 1: how many lanes does this day need? An event's lane is
+            the number of earlier events on the day that overlap it, so
+            the column needs max(lane) + 1 lanes.
+          {%- endcomment -%}
+          {%- assign lanes = 1 -%}
+          {%- for ev in events -%}
+            {%- if ev.all_day -%}{%- continue -%}{%- endif -%}
+            {%- assign ev_day = ev.start_full | split: "T" | first -%}
+            {%- unless ev_day == day_key -%}{%- continue -%}{%- endunless -%}
+            {%- assign me = forloop.index0 -%}
+            {%- assign tb = ev.start_full | split: "T" | last | split: ":" -%}
+            {%- assign s1 = tb[0] | times: 60 | plus: tb[1] -%}
+            {%- assign te = ev.end_full | split: "T" | last | split: ":" -%}
+            {%- if ev.end_full == blank -%}{%- assign e1 = s1 | plus: 60 -%}{%- else -%}{%- assign e1 = te[0] | times: 60 | plus: te[1] -%}{%- endif -%}
+            {%- if e1 <= s1 -%}{%- assign e1 = s1 | plus: 30 -%}{%- endif -%}
+            {%- assign lane = 0 -%}
+            {%- for f in events -%}
+              {%- if forloop.index0 >= me -%}{%- break -%}{%- endif -%}
+              {%- if f.all_day -%}{%- continue -%}{%- endif -%}
+              {%- assign f_day = f.start_full | split: "T" | first -%}
+              {%- unless f_day == day_key -%}{%- continue -%}{%- endunless -%}
+              {%- assign fs = f.start_full | split: "T" | last | split: ":" -%}
+              {%- assign s2 = fs[0] | times: 60 | plus: fs[1] -%}
+              {%- assign fe = f.end_full | split: "T" | last | split: ":" -%}
+              {%- if f.end_full == blank -%}{%- assign e2 = s2 | plus: 60 -%}{%- else -%}{%- assign e2 = fe[0] | times: 60 | plus: fe[1] -%}{%- endif -%}
+              {%- if e2 <= s2 -%}{%- assign e2 = s2 | plus: 30 -%}{%- endif -%}
+              {%- if s2 < e1 and e2 > s1 -%}{%- assign lane = lane | plus: 1 -%}{%- endif -%}
+            {%- endfor -%}
+            {%- assign need = lane | plus: 1 -%}
+            {%- if need > lanes -%}{%- assign lanes = need -%}{%- endif -%}
+          {%- endfor -%}
+          {%- assign lane_w = 100 | divided_by: lanes -%}
+
+          <div class="cg-col{% if weekend and SHADE_WEEKENDS %} bg--gray-10{% endif %}" data-grid-col="{{ day_key }}">
+            {%- comment -%} Pass 2: place the blocks. {%- endcomment -%}
+            {%- for ev in events -%}
+              {%- if ev.all_day -%}{%- continue -%}{%- endif -%}
+              {%- assign ev_day = ev.start_full | split: "T" | first -%}
+              {%- unless ev_day == day_key -%}{%- continue -%}{%- endunless -%}
+              {%- assign me = forloop.index0 -%}
+              {%- assign tb = ev.start_full | split: "T" | last | split: ":" -%}
+              {%- assign s1 = tb[0] | times: 60 | plus: tb[1] -%}
+              {%- assign te = ev.end_full | split: "T" | last | split: ":" -%}
+              {%- if ev.end_full == blank -%}{%- assign e1 = s1 | plus: 60 -%}{%- else -%}{%- assign e1 = te[0] | times: 60 | plus: te[1] -%}{%- endif -%}
+              {%- if e1 <= s1 -%}{%- assign e1 = s1 | plus: 30 -%}{%- endif -%}
+
+              {%- comment -%} clamp into the visible window {%- endcomment -%}
+              {%- assign vs = s1 -%}{%- if vs < START_MIN -%}{%- assign vs = START_MIN -%}{%- endif -%}
+              {%- assign ve = e1 -%}{%- if ve > END_MIN -%}{%- assign ve = END_MIN -%}{%- endif -%}
+              {%- if ve <= START_MIN or vs >= END_MIN -%}{%- continue -%}{%- endif -%}
+
+              {%- assign top = vs | minus: START_MIN | times: GRID_H | divided_by: SPAN_MIN -%}
+              {%- assign hgt = ve | minus: vs | times: GRID_H | divided_by: SPAN_MIN -%}
+              {%- if hgt < MIN_BLOCK_H -%}{%- assign hgt = MIN_BLOCK_H -%}{%- endif -%}
+
+              {%- assign lane = 0 -%}
+              {%- for f in events -%}
+                {%- if forloop.index0 >= me -%}{%- break -%}{%- endif -%}
+                {%- if f.all_day -%}{%- continue -%}{%- endif -%}
+                {%- assign f_day = f.start_full | split: "T" | first -%}
+                {%- unless f_day == day_key -%}{%- continue -%}{%- endunless -%}
+                {%- assign fs = f.start_full | split: "T" | last | split: ":" -%}
+                {%- assign s2 = fs[0] | times: 60 | plus: fs[1] -%}
+                {%- assign fe = f.end_full | split: "T" | last | split: ":" -%}
+                {%- if f.end_full == blank -%}{%- assign e2 = s2 | plus: 60 -%}{%- else -%}{%- assign e2 = fe[0] | times: 60 | plus: fe[1] -%}{%- endif -%}
+                {%- if e2 <= s2 -%}{%- assign e2 = s2 | plus: 30 -%}{%- endif -%}
+                {%- if s2 < e1 and e2 > s1 -%}{%- assign lane = lane | plus: 1 -%}{%- endif -%}
+              {%- endfor -%}
+              {%- assign lane_l = lane | times: lane_w -%}
 
               {%- assign ci = 0 -%}
               {%- for c in cals -%}{%- if c == ev.calname -%}{%- assign ci = forloop.index0 -%}{%- break -%}{%- endif -%}{%- endfor -%}
               {%- assign token = CAL_TOKENS[ci] -%}
               {%- assign gi = ci | modulo: GLYPHS.size -%}
-              {%- assign glyph = GLYPHS[gi] -%}
-              {%- assign shown = shown | plus: 1 -%}
 
-              <div class="item" data-event="true">
-                {%- if MODE == "bar" or MODE == "both" -%}
-                  <div class="bg--{{ token }} rounded--small" style="width:{{ BAR_WIDTH }}px;align-self:stretch;flex-shrink:0"></div>
-                {%- endif -%}
-                {%- if MODE == "glyph" or MODE == "both" -%}
-                  <div class="meta"><span class="index text--{{ token }}">{{ glyph }}</span></div>
-                {%- endif -%}
-                <div class="content">
-                  <span class="title title--{{ TITLE_SIZE }}" data-clamp="2">{{ ev.summary }}</span>
-                  {%- if SHOW_TIME -%}
-                    {%- if ev.all_day -%}
-                      <span class="label label--small label--underline">All day</span>
-                    {%- else -%}
-                      <span class="label label--small label--underline">{{ ev.start }} – {{ ev.end }}</span>
-                    {%- endif -%}
-                  {%- endif -%}
-                  {%- if SHOW_DESC and ev.description != blank -%}
-                    <span class="description" data-clamp="1">{{ ev.description }}</span>
+              <div class="cg-block px--1" style="top:{{ top }}px;height:{{ hgt }}px;left:{{ lane_l }}%;width:{{ lane_w }}%" data-event-block="true">
+                <div class="cg-bar bg--{{ token }}"></div>
+                <div class="cg-body bg--white px--1">
+                  <span class="label label--xsmall cg-line"><span class="text--{{ token }}">{{ GLYPHS[gi] }}</span> {{ ev.summary }}</span>
+                  {%- if hgt >= TIME_BLOCK_H -%}
+                    <span class="label label--xsmall text--gray-45 cg-line">{{ ev.start }}</span>
                   {%- endif -%}
                 </div>
               </div>
             {%- endfor -%}
-          {%- endfor -%}
-
-          {%- if shown == 0 -%}
-            <span class="label label--small text--gray-45">—</span>
-          {%- endif -%}
-        </div>
-      {%- endfor -%}
+          </div>
+        {%- endfor -%}
+      </div>
     </div>
   </div>
 

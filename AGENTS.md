@@ -1,8 +1,9 @@
 # trmnl-calendar-color
 
-Four TRMNL Liquid templates that render a **3-day week** — one column per
-day, starting today — with each event color-coded by which calendar it
-came from. They run as a TRMNL **Private Plugin with
+Four TRMNL Liquid templates that render a **3 Day Week time grid** —
+hours down the left axis, one column per day starting today, every timed
+event a block positioned by start time and sized by duration — with each
+event color-coded by which calendar it came from. They run as a TRMNL **Private Plugin with
 strategy Plugin Merge**, reading the merge variable a native Google
 Calendar plugin instance publishes. There is no application code and no
 data layer here — TRMNL's own plugin fetches the events; these templates
@@ -12,26 +13,32 @@ only render them.
 
 | path | what |
 |---|---|
-| `src/full.liquid` | full layout, 800x480, 3 day columns, descriptions on |
-| `src/half_horizontal.liquid` | half layout, 3 day columns, 4 events/day |
-| `src/half_vertical.liquid` | half layout, 2 day columns, legend off |
-| `src/quadrant.liquid` | quadrant layout, 2 day columns, 3 events/day |
+| `src/full.liquid` | full layout, 3 day columns, 17px/hour, hourly labels |
+| `src/half_horizontal.liquid` | half layout, 3 day columns, 7px/hour, every 3rd label |
+| `src/half_vertical.liquid` | half layout, 2 day columns, 16px/hour, legend off |
+| `src/quadrant.liquid` | quadrant layout, 2 day columns, 6px/hour, legend off |
 | `src/settings.yml` | plugin metadata read by trmnlp. Not the deploy path |
 | `.trmnlp.yml` | local-preview fixture that stands in for the merge variable |
 | `bin/trmnlp` | gem-or-Docker wrapper for the `trmnlp` CLI |
 | `scripts/check.sh` | the canonical check |
 
 Each layout is the same template with a different knob block at the top
-(`NUM_DAYS`, `MAX_PER_DAY`, `MODE`, `SHOW_LEGEND`, `CAL_MAP`, …). A change
+(`NUM_DAYS`, `HOUR_H`, `HOUR_EVERY`, `SHOW_LEGEND`, `CAL_MAP`, …). A change
 to the render body has to land in all four files.
 
 The knobs mirror the native Google Calendar instance's own display
 settings, so the private plugin and the native one agree: `NUM_DAYS = 3`
 for its `three_day_week` layout, `DAY_FMT` for `date_format: short`,
 `HIGHLIGHT_TODAY` and `SHADE_WEEKENDS` for its matching toggles, and
-`SHOW_DESC` for `include_description`. Event times are printed straight
-from `ev.start` / `ev.end`, which the native plugin has already formatted
-with its `time_format`, so the clock style needs no knob.
+`GRID_START_H` / `GRID_END_H` (5 and 23) for its `scroll_time` and
+`scroll_time_end`. Event times are printed straight from `ev.start`,
+which the native plugin has already formatted with its `time_format`, so
+the clock style needs no knob.
+
+`HOUR_H` is pixels per hour and the grid height is derived from it. Do
+not set a height directly: the hour rules are a repeating gradient at a
+fixed pixel pitch, and a height that is not a whole multiple of the hour
+count slides the rules out from under the events.
 
 ## Commands
 

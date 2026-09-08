@@ -50,6 +50,15 @@ variables:
         start: 9:00 AM
         end: 9:15 AM
         start_full: '2026-09-07T09:00:00-05:00'
+        end_full: '2026-09-07T09:15:00-05:00'
+      - summary: Overlapping call
+        description: ''
+        calname: work@google.com
+        all_day: false
+        start: 9:00 AM
+        end: 10:00 AM
+        start_full: '2026-09-07T09:00:00-05:00'
+        end_full: '2026-09-07T10:00:00-05:00'
       - summary: Dentist
         description: Cleaning, 2nd floor
         calname: you@gmail.com
@@ -57,6 +66,7 @@ variables:
         start: 11:30 AM
         end: 12:30 PM
         start_full: '2026-09-07T11:30:00-05:00'
+        end_full: '2026-09-07T12:30:00-05:00'
       - summary: Soccer practice
         description: ''
         calname: abc123@group.calendar.google.com
@@ -64,6 +74,7 @@ variables:
         start: 4:00 PM
         end: 5:30 PM
         start_full: '2026-09-07T16:00:00-05:00'
+        end_full: '2026-09-07T17:30:00-05:00'
       - summary: Quarterly planning review
         description: Bring the roadmap deck
         calname: work@google.com
@@ -71,6 +82,7 @@ variables:
         start: 10:00 AM
         end: 11:30 AM
         start_full: '2026-09-08T10:00:00-05:00'
+        end_full: '2026-09-08T11:30:00-05:00'
       - summary: Dinner with Sam
         description: ''
         calname: you@gmail.com
@@ -78,6 +90,7 @@ variables:
         start: 7:00 PM
         end: 9:00 PM
         start_full: '2026-09-09T19:00:00-05:00'
+        end_full: '2026-09-09T21:00:00-05:00'
       - summary: Unlisted calendar event
         description: Exercises the FALLBACK token cycle
         calname: other@example.com
@@ -85,6 +98,7 @@ variables:
         start: 2:00 PM
         end: 3:00 PM
         start_full: '2026-09-09T14:00:00-05:00'
+        end_full: '2026-09-09T15:00:00-05:00'
       - summary: PAST should not render
         description: ''
         calname: you@gmail.com

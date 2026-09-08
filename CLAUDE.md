@@ -28,10 +28,13 @@ pasting each `src/*.liquid` into its markup tab on the site.
 
 `trmnlp lint` checks TRMNL best practices; it does not prove the Liquid
 produced anything. `scripts/check.sh` also greps the built HTML, because a Liquid failure in
-trmnlp renders as body text with a zero exit code. It asserts the day
-window (one column per day, today present and highlighted, the day math
-actually advancing), that nothing outside the window leaks in, and that a
-multi-day all-day event repeats across the days it covers. Keep those
+trmnlp renders as body text with a zero exit code. It asserts that the
+output is a grid and not a list: an hour axis, one grid column per day
+with today highlighted, the day math advancing, all-day band entries, and
+event blocks whose `top`/`height` differ from one another (proving they
+are placed from the clock rather than stacked). It also asserts that two
+9:00 events lane side by side, and that nothing outside the day window
+leaks in. Keep those
 assertions in step with the template; the fixture carries a deliberate
 "should not render" event on either side of the window, so widening
 `NUM_DAYS` without thinking fails the check.
