@@ -19,6 +19,40 @@ The public repo (`usetrmnl/plugins/lib/google_calendar`) only holds the Ruby dat
    ```
    Unlisted calendars get tokens from `FALLBACK`, skipping any token already claimed in `CAL_MAP`.
 
+## Repo layout
+
+| path | what |
+|---|---|
+| `src/full.liquid`, `half_horizontal`, `half_vertical`, `quadrant` | the four markup tabs, one per TRMNL layout |
+| `src/settings.yml` | plugin metadata for trmnlp. Not the deploy path — see below |
+| `.trmnlp.yml` | local preview fixture standing in for the merge variable |
+| `bin/trmnlp` | runs the `trmnlp` gem if installed, else the Docker image |
+| `scripts/check.sh` | lint plus a render of all four layouts |
+
+## Local preview
+
+Needs either the `trmnl_preview` gem (Ruby >= 3.2) or Docker. This machine
+has neither a modern Ruby nor the gem, so `bin/trmnlp` falls through to
+`trmnl/trmnlp:latest` on Docker.
+
+```
+./scripts/check.sh          # lint + render all four layouts into _build/
+./bin/trmnlp serve          # live preview at http://localhost:4567
+```
+
+trmnlp knows the `polling`, `webhook` and `static` strategies but not
+Plugin Merge, so the preview fakes the merge variable: `variables:` in
+`.trmnlp.yml` deep-merges into the top-level Liquid scope, which is
+exactly where `google_calendar_<id>` lands on the server. The fixture
+covers three mapped calendars, an all-day event, and one unmapped
+calendar so the `FALLBACK` token cycle gets exercised. Rename the fixture
+key and the `assign src = ...` line together.
+
+`strategy: polling` with an empty `polling_url` is an inert placeholder
+that keeps the local renderer happy. **Do not `trmnlp push`** — that
+would create a polling plugin on the server, not a Plugin Merge one.
+Deploy by pasting each `src/*.liquid` into its markup tab, per Setup above.
+
 ## Knobs (top of each file)
 
 | var | values | notes |
