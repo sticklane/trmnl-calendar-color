@@ -2,7 +2,7 @@
 
 Four TRMNL Liquid templates that render a **3 Day Week time grid** —
 hours down the left axis, one column per day starting today, every timed
-event a block positioned by start time and sized by duration — with each
+event a thin duration bar plus a text entry anchored at its start — with each
 event color-coded by which calendar it came from. They run as a TRMNL **Private Plugin with
 strategy Plugin Merge**, reading the merge variable a native Google
 Calendar plugin instance publishes. There is no application code and no
@@ -45,11 +45,18 @@ it and the real `GRID_H` is `HOUR_H * HOURS`. Setting a height directly
 desynchronises the hour rules (a repeating gradient at a fixed pitch)
 from the axis cells and the block maths.
 
-Overlapping events are laned by an interval-graph sweep: each event takes
-the lowest lane already free at its start, so lanes are reused, and a
-cluster's width divisor is its own peak concurrency, so a busy cluster
-does not narrow a quiet neighbour. Rectangles must never intersect —
-`scripts/geometry_check.py` fails the build if any pair does.
+An event is drawn the way the native plugin draws it: a thin bar spanning
+its duration, plus one line of text ("time title") anchored at its start.
+Sizing a rectangle to the duration is what an earlier version did, and a
+30-minute event became an 8px box with unreadable text.
+
+Overlapping events are laned by an interval sweep — each takes the lowest
+lane free at its start — and `MAX_LANES` (2, or 1 on the quadrant) caps
+what is drawn, with the rest counted into a "+N" marker. Text stacking is
+separate from laning: `lane_free` is a COLUMN-wide next-free-y per lane,
+so consecutive entries push down instead of overprinting. Do not reset it
+at a cluster boundary, and do not clamp a bar taller than its duration —
+both were bugs that the geometry check now catches.
 
 ## Commands
 

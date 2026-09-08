@@ -34,14 +34,16 @@ with today highlighted, the day math advancing, all-day band entries, and
 event blocks whose `top`/`height` differ from one another (proving they
 are placed from the clock rather than stacked). It also asserts that two
 9:00 events lane side by side, and that nothing outside the day window
-leaks in. `scripts/geometry_check.py` then parses every block rectangle
-and fails if any two in a column intersect, or if an hour label is
-anything but a clean `\d{1,2}[ap]`.
+leaks in. `scripts/geometry_check.py` then parses the geometry and
+fails if two duration bars in a column intersect, if two text entries in
+the same lane overprint (their y ranges must be disjoint), or if an hour
+label is anything but a clean `\d{1,2}(am|pm)`.
 
 Keep those assertions in step with the template. The fixture is built to
 falsify them: an out-of-window event on either side, and a Tuesday
 cluster of a long block plus a stack of overlapping ones that only lanes
-correctly under a real sweep.
+correctly under a real sweep, and a Wednesday run of three back-to-back
+15-minute events that only reads correctly when the text pushes down.
 
 ## Color tokens
 

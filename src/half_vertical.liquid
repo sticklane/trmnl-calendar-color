@@ -45,9 +45,11 @@
                                           GRID_H are derived from it so the hour rules, the axis cells
                                           and the block maths all sit on one integer scale. {%- endcomment -%}
 {%- assign HOUR_EVERY = 2 -%}         {%- comment -%} label every Nth hour {%- endcomment -%}
-{%- assign AXIS_W = 28 -%}
-{%- assign MIN_BLOCK_H = 9 -%}
-{%- assign TWO_LINE_H = 26 -%}        {%- comment -%} below this a block is one line: "time title" {%- endcomment -%}
+{%- assign AXIS_W = 40 -%}       {%- comment -%} fits "12pm" at the label font {%- endcomment -%}
+{%- assign MIN_BAR_H = 1 -%}          {%- comment -%} bars stay exact: clamping one taller than its
+                                          duration makes back-to-back events overlap {%- endcomment -%}
+{%- assign LINE_H = 11 -%}            {%- comment -%} one text entry line {%- endcomment -%}
+{%- assign MAX_LANES = 2 -%}          {%- comment -%} more than 2 lanes cannot hold readable text {%- endcomment -%}
 {%- assign DAY_FMT = "%a %-m/%-d" -%} {%- comment -%} native date_format: short {%- endcomment -%}
 {%- assign HIGHLIGHT_TODAY = true -%}
 {%- assign SHADE_WEEKENDS = true -%}
@@ -140,20 +142,23 @@
     background-image: repeating-linear-gradient(
       to bottom, #999 0, #999 1px, transparent 1px, transparent var(--cg-hour-h));
   }
-  .cg-block { position: absolute; box-sizing: border-box; display: flex; overflow: hidden; }
-  .cg-bar { flex: 0 0 var(--cg-bar-w); width: var(--cg-bar-w); }
-  .cg-body {
-    flex: 1 1 auto; min-width: 0;
-    border: 1px solid currentColor; border-left: 0;
-    overflow: hidden; line-height: 1.05;
+  /* An event is a duration BAR plus a TEXT ENTRY anchored at its start,
+     the way the native plugin draws it. The entry may extend below the
+     bar, so a 30-minute event stays readable instead of collapsing to
+     an 8px rectangle. */
+  .cg-bar { position: absolute; width: var(--cg-bar-w); }
+  .cg-entry {
+    position: absolute; box-sizing: border-box; overflow: hidden;
+    height: var(--cg-line-h); line-height: var(--cg-line-h);
   }
+  .cg-more { position: absolute; right: 0; line-height: var(--cg-line-h); }
   .cg-line { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cg-ad { display: flex; align-items: center; line-height: 1.1; }
 </style>
 
 <div class="view view--{{ VIEW }}">
   <div class="layout">
-    <div class="cg-wrap" style="--cg-axis-w:{{ AXIS_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-bar-w:{{ BAR_W }}px">
+    <div class="cg-wrap" style="--cg-axis-w:{{ AXIS_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-bar-w:{{ BAR_W }}px;--cg-line-h:{{ LINE_H }}px">
 
       {%- comment -%} ---------- day header row ---------- {%- endcomment -%}
       <div class="cg-row cg-row--head">
@@ -221,7 +226,7 @@
               {%- if hmod == 0 -%}
                 {%- assign h12 = h | modulo: 12 -%}
                 {%- if h12 == 0 -%}{%- assign h12 = 12 -%}{%- endif -%}
-                {%- if h < 12 -%}{%- assign ap = "a" -%}{%- else -%}{%- assign ap = "p" -%}{%- endif -%}
+                {%- if h < 12 -%}{%- assign ap = "am" -%}{%- else -%}{%- assign ap = "pm" -%}{%- endif -%}
                 <span class="label label--xsmall text--gray-45" data-hour="{{ h }}">{{ h12 }}{{ ap }}</span>
               {%- endif -%}
             </div>
@@ -237,25 +242,33 @@
           {%- if dow == "0" or dow == "6" -%}{%- assign weekend = true -%}{%- endif -%}
 
           {%- comment -%}
-            Pass 1 — interval-graph sweep over the day, in start order.
+            Pass 1 — interval sweep over the day, in start order.
 
-            lane_ends holds the end minute of each open lane. An event
-            takes the LOWEST lane whose previous event has already
-            finished, so lanes are reused and rectangles never overlap.
+            lane_ends holds the end minute of each open lane; an event
+            takes the LOWEST lane already free at its start, so lanes are
+            reused and duration bars never overlap. lane_free holds each
+            lane's next free TEXT y: an entry is anchored at its start
+            time unless the previous entry in that lane still occupies
+            that line, in which case it is pushed to the first free line
+            below — the native plugin's stacked
+            "9:00 AM Busy / 9:45 AM Busy" behaviour.
+
             A cluster closes when an event starts at or after every open
-            lane's end (cluster_max_end); its width divisor is the peak
-            concurrency reached inside it, so a 2-deep cluster does not
-            squeeze a neighbouring 1-deep one.
+            lane's end. Only MAX_LANES lanes are drawn; the rest are
+            counted into the cluster's "+N" marker.
 
-            recs entries are "index:lane:cluster", clusters are
-            "cluster:lanecount"; pass 2 reads both back by index.
+            recs entries are "index:lane:texty", clusters are
+            "cluster:lanes:overflow:top".
           {%- endcomment -%}
           {%- assign recs = "" -%}
           {%- assign clusters = "" -%}
           {%- assign lane_ends = "" -%}
+          {%- assign lane_free = "" -%}
           {%- assign cluster_id = 0 -%}
           {%- assign cluster_max_end = 0 -%}
           {%- assign cluster_lanes = 0 -%}
+          {%- assign cluster_over = 0 -%}
+          {%- assign cluster_top = 0 -%}
           {%- assign started = false -%}
           {%- for ev in events -%}
             {%- if ev.all_day -%}{%- continue -%}{%- endif -%}
@@ -267,17 +280,24 @@
             {%- assign te = ev.end_full | split: "T" | last | split: ":" -%}
             {%- if ev.end_full == blank -%}{%- assign e1 = s1 | plus: 60 -%}{%- else -%}{%- assign e1 = te[0] | times: 60 | plus: te[1] -%}{%- endif -%}
             {%- if e1 <= s1 -%}{%- assign e1 = s1 | plus: 30 -%}{%- endif -%}
+            {%- assign vs = s1 -%}{%- if vs < START_MIN -%}{%- assign vs = START_MIN -%}{%- endif -%}
+            {%- if vs >= END_MIN -%}{%- continue -%}{%- endif -%}
+            {%- assign top = vs | minus: START_MIN | times: GRID_H | divided_by: SPAN_MIN -%}
 
             {%- if started and s1 >= cluster_max_end -%}
-              {%- assign clusters = clusters | append: cluster_id | append: ":" | append: cluster_lanes | append: "," -%}
+              {%- assign clusters = clusters | append: cluster_id | append: ":" | append: cluster_lanes | append: ":" | append: cluster_over | append: ":" | append: cluster_top | append: "," -%}
               {%- assign cluster_id = cluster_id | plus: 1 -%}
               {%- assign lane_ends = "" -%}
               {%- assign cluster_lanes = 0 -%}
+              {%- assign cluster_over = 0 -%}
               {%- assign cluster_max_end = 0 -%}
+              {%- assign cluster_top = top -%}
             {%- endif -%}
+            {%- unless started -%}{%- assign cluster_top = top -%}{%- endunless -%}
             {%- assign started = true -%}
 
             {%- assign LE = lane_ends | split: "," -%}
+            {%- assign LF = lane_free | split: "," -%}
             {%- assign chosen = -1 -%}
             {%- for le in LE -%}
               {%- assign lev = le | times: 1 -%}
@@ -289,11 +309,8 @@
             {%- else -%}
               {%- assign nl = "" -%}
               {%- for le in LE -%}
-                {%- if forloop.index0 == chosen -%}
-                  {%- assign nl = nl | append: e1 | append: "," -%}
-                {%- else -%}
-                  {%- assign nl = nl | append: le | append: "," -%}
-                {%- endif -%}
+                {%- if forloop.index0 == chosen -%}{%- assign nl = nl | append: e1 | append: "," -%}
+                {%- else -%}{%- assign nl = nl | append: le | append: "," -%}{%- endif -%}
               {%- endfor -%}
               {%- assign lane_ends = nl -%}
             {%- endif -%}
@@ -301,55 +318,92 @@
             {%- assign used = chosen | plus: 1 -%}
             {%- if used > cluster_lanes -%}{%- assign cluster_lanes = used -%}{%- endif -%}
             {%- if e1 > cluster_max_end -%}{%- assign cluster_max_end = e1 -%}{%- endif -%}
-            {%- assign recs = recs | append: idx | append: ":" | append: chosen | append: ":" | append: cluster_id | append: "," -%}
+
+            {%- comment -%}
+              lane_free is a COLUMN-wide text cursor per lane, not a
+              per-cluster one: a cluster boundary resets lane assignment
+              but text must still not land on the line above it.
+            {%- endcomment -%}
+            {%- assign need_lf = chosen | plus: 1 -%}
+            {%- for pad in (1..need_lf) -%}
+              {%- assign LF = lane_free | split: "," -%}
+              {%- if LF.size >= need_lf -%}{%- break -%}{%- endif -%}
+              {%- assign lane_free = lane_free | append: "0," -%}
+            {%- endfor -%}
+            {%- assign LF = lane_free | split: "," -%}
+
+            {%- if chosen >= MAX_LANES -%}
+              {%- assign cluster_over = cluster_over | plus: 1 -%}
+              {%- assign recs = recs | append: idx | append: ":-1:0:" | append: cluster_id | append: "," -%}
+            {%- else -%}
+              {%- assign fy = LF[chosen] | times: 1 -%}
+              {%- assign ty = top -%}
+              {%- if fy > ty -%}{%- assign ty = fy -%}{%- endif -%}
+              {%- assign nf = "" -%}
+              {%- for f in LF -%}
+                {%- if forloop.index0 == chosen -%}
+                  {%- assign adv = ty | plus: LINE_H -%}
+                  {%- assign nf = nf | append: adv | append: "," -%}
+                {%- else -%}{%- assign nf = nf | append: f | append: "," -%}{%- endif -%}
+              {%- endfor -%}
+              {%- assign lane_free = nf -%}
+              {%- assign recs = recs | append: idx | append: ":" | append: chosen | append: ":" | append: ty | append: ":" | append: cluster_id | append: "," -%}
+            {%- endif -%}
           {%- endfor -%}
           {%- if started -%}
-            {%- assign clusters = clusters | append: cluster_id | append: ":" | append: cluster_lanes | append: "," -%}
+            {%- assign clusters = clusters | append: cluster_id | append: ":" | append: cluster_lanes | append: ":" | append: cluster_over | append: ":" | append: cluster_top | append: "," -%}
           {%- endif -%}
           {%- assign RECS = recs | split: "," -%}
           {%- assign CLUS = clusters | split: "," -%}
 
           <div class="cg-col{% if weekend and SHADE_WEEKENDS %} bg--gray-10{% endif %}" data-grid-col="{{ day_key }}">
-            {%- comment -%} Pass 2 — place the blocks from the sweep's lanes. {%- endcomment -%}
+            {%- comment -%} Pass 2 — draw each event's bar and its text entry. {%- endcomment -%}
             {%- for ev in events -%}
               {%- if ev.all_day -%}{%- continue -%}{%- endif -%}
               {%- assign ev_day = ev.start_full | split: "T" | first -%}
               {%- unless ev_day == day_key -%}{%- continue -%}{%- endunless -%}
               {%- assign idx = forloop.index0 -%}
-              {%- assign tb = ev.start_full | split: "T" | last | split: ":" -%}
-              {%- assign s1 = tb[0] | times: 60 | plus: tb[1] -%}
-              {%- assign te = ev.end_full | split: "T" | last | split: ":" -%}
-              {%- if ev.end_full == blank -%}{%- assign e1 = s1 | plus: 60 -%}{%- else -%}{%- assign e1 = te[0] | times: 60 | plus: te[1] -%}{%- endif -%}
-              {%- if e1 <= s1 -%}{%- assign e1 = s1 | plus: 30 -%}{%- endif -%}
 
-              {%- comment -%} clamp into the visible window {%- endcomment -%}
-              {%- assign vs = s1 -%}{%- if vs < START_MIN -%}{%- assign vs = START_MIN -%}{%- endif -%}
-              {%- assign ve = e1 -%}{%- if ve > END_MIN -%}{%- assign ve = END_MIN -%}{%- endif -%}
-              {%- if ve <= START_MIN or vs >= END_MIN -%}{%- continue -%}{%- endif -%}
-
-              {%- assign top = vs | minus: START_MIN | times: GRID_H | divided_by: SPAN_MIN -%}
-              {%- assign hgt = ve | minus: vs | times: GRID_H | divided_by: SPAN_MIN -%}
-              {%- if hgt < MIN_BLOCK_H -%}{%- assign hgt = MIN_BLOCK_H -%}{%- endif -%}
-
-              {%- assign lane = 0 -%}
+              {%- assign lane = -1 -%}
+              {%- assign ty = 0 -%}
               {%- assign myclus = 0 -%}
+              {%- assign seen = false -%}
               {%- for r in RECS -%}
                 {%- assign rp = r | split: ":" -%}
                 {%- assign ri = rp[0] | times: 1 -%}
                 {%- if ri == idx -%}
                   {%- assign lane = rp[1] | times: 1 -%}
-                  {%- assign myclus = rp[2] | times: 1 -%}
+                  {%- assign ty = rp[2] | times: 1 -%}
+                  {%- assign myclus = rp[3] | times: 1 -%}
+                  {%- assign seen = true -%}
                   {%- break -%}
                 {%- endif -%}
               {%- endfor -%}
-              {%- assign lanes = 1 -%}
+              {%- unless seen -%}{%- continue -%}{%- endunless -%}
+              {%- if lane < 0 -%}{%- continue -%}{%- endif -%}
+
+              {%- comment -%} width divisor is this cluster's own visible lane count {%- endcomment -%}
+              {%- assign VIS = 1 -%}
               {%- for cpair in CLUS -%}
                 {%- assign cp = cpair | split: ":" -%}
                 {%- assign cid = cp[0] | times: 1 -%}
-                {%- if cid == myclus -%}{%- assign lanes = cp[1] | times: 1 -%}{%- break -%}{%- endif -%}
+                {%- if cid == myclus -%}{%- assign VIS = cp[1] | times: 1 -%}{%- break -%}{%- endif -%}
               {%- endfor -%}
-              {%- if lanes < 1 -%}{%- assign lanes = 1 -%}{%- endif -%}
-              {%- assign lane_w = 100 | divided_by: lanes -%}
+              {%- if VIS > MAX_LANES -%}{%- assign VIS = MAX_LANES -%}{%- endif -%}
+              {%- if VIS < 1 -%}{%- assign VIS = 1 -%}{%- endif -%}
+              {%- assign lane_w = 100 | divided_by: VIS -%}
+
+              {%- assign tb = ev.start_full | split: "T" | last | split: ":" -%}
+              {%- assign s1 = tb[0] | times: 60 | plus: tb[1] -%}
+              {%- assign te = ev.end_full | split: "T" | last | split: ":" -%}
+              {%- if ev.end_full == blank -%}{%- assign e1 = s1 | plus: 60 -%}{%- else -%}{%- assign e1 = te[0] | times: 60 | plus: te[1] -%}{%- endif -%}
+              {%- if e1 <= s1 -%}{%- assign e1 = s1 | plus: 30 -%}{%- endif -%}
+              {%- assign vs = s1 -%}{%- if vs < START_MIN -%}{%- assign vs = START_MIN -%}{%- endif -%}
+              {%- assign ve = e1 -%}{%- if ve > END_MIN -%}{%- assign ve = END_MIN -%}{%- endif -%}
+              {%- if ve <= START_MIN or vs >= END_MIN -%}{%- continue -%}{%- endif -%}
+              {%- assign top = vs | minus: START_MIN | times: GRID_H | divided_by: SPAN_MIN -%}
+              {%- assign hgt = ve | minus: vs | times: GRID_H | divided_by: SPAN_MIN -%}
+              {%- if hgt < MIN_BAR_H -%}{%- assign hgt = MIN_BAR_H -%}{%- endif -%}
               {%- assign lane_l = lane | times: lane_w -%}
 
               {%- assign ci = 0 -%}
@@ -357,17 +411,22 @@
               {%- assign token = CAL_TOKENS[ci] -%}
               {%- assign gi = ci | modulo: GLYPHS.size -%}
 
-              <div class="cg-block px--1" style="top:{{ top }}px;height:{{ hgt }}px;left:{{ lane_l }}%;width:{{ lane_w }}%" data-event-block="true">
-                <div class="cg-bar bg--{{ token }}"></div>
-                <div class="cg-body bg--white px--1">
-                  {%- if hgt >= TWO_LINE_H -%}
-                    <span class="label label--xsmall cg-line"><span class="text--{{ token }}">{{ GLYPHS[gi] }}</span> {{ ev.summary }}</span>
-                    <span class="label label--xsmall text--gray-45 cg-line">{{ ev.start }}</span>
-                  {%- else -%}
-                    <span class="label label--xsmall cg-line"><span class="text--{{ token }}">{{ GLYPHS[gi] }}</span> {{ ev.start }} {{ ev.summary }}</span>
-                  {%- endif -%}
-                </div>
+              <div class="cg-bar bg--{{ token }}" style="top:{{ top }}px;height:{{ hgt }}px;left:{{ lane_l }}%" data-bar="{{ lane }}" data-bar-geom="{{ top }},{{ hgt }},{{ lane_l }},{{ lane_w }}"></div>
+              <div class="cg-entry" style="top:{{ ty }}px;left:calc({{ lane_l }}% + {{ BAR_W }}px);width:calc({{ lane_w }}% - {{ BAR_W }}px)" data-entry="{{ lane }}" data-entry-geom="{{ ty }},{{ LINE_H }},{{ lane_l }},{{ lane_w }}">
+                <span class="label label--xsmall cg-line"><span class="text--{{ token }}">{{ GLYPHS[gi] }}</span> {{ ev.start }} {{ ev.summary }}</span>
               </div>
+            {%- endfor -%}
+
+            {%- comment -%} "+N" for events beyond MAX_LANES {%- endcomment -%}
+            {%- for cpair in CLUS -%}
+              {%- assign cp = cpair | split: ":" -%}
+              {%- assign cov = cp[2] | times: 1 -%}
+              {%- if cov > 0 -%}
+                {%- assign ctop = cp[3] | times: 1 -%}
+                <div class="cg-more" style="top:{{ ctop }}px" data-more="{{ cov }}">
+                  <span class="label label--xsmall text--gray-45">+{{ cov }}</span>
+                </div>
+              {%- endif -%}
             {%- endfor -%}
           </div>
         {%- endfor -%}

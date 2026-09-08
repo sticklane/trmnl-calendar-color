@@ -29,17 +29,20 @@ for layout in full half_horizontal half_vertical quadrant; do
     grep -q 'data-grid-col="2026-09-08"' "$out" || { echo "FAIL: $out day math did not advance a day"; exit 1; }
     grep -q 'label--filled" data-day-header' "$out" || { echo "FAIL: $out does not highlight today"; exit 1; }
 
-    blocks=$(grep -o 'data-event-block' "$out" | wc -l | tr -d ' ')
-    [ "$blocks" -ge 4 ] || { echo "FAIL: $out placed $blocks event blocks, want >= 4"; exit 1; }
+    blocks=$(grep -o 'data-entry-geom' "$out" | wc -l | tr -d ' ')
+    [ "$blocks" -ge 4 ] || { echo "FAIL: $out placed $blocks text entries, want >= 4"; exit 1; }
     grep -q 'data-allday="true"' "$out" || { echo "FAIL: $out has no all-day band entries"; exit 1; }
 
-    # Blocks must be positioned AND sized from the clock, not stacked.
-    grep -qE 'top:[0-9]+px;height:[0-9]+px' "$out" || { echo "FAIL: $out blocks are not time-positioned"; exit 1; }
+    # Duration bars must be sized from the clock, not all identical.
+    grep -qE 'top:[0-9]+px;height:[0-9]+px' "$out" || { echo "FAIL: $out bars are not time-positioned"; exit 1; }
     [ "$(grep -oE 'top:[0-9]+px;height:[0-9]+px' "$out" | sort -u | wc -l | tr -d ' ')" -ge 3 ] || {
-        echo "FAIL: $out blocks all share one geometry"; exit 1; }
+        echo "FAIL: $out bars all share one geometry"; exit 1; }
 
     # Overlapping events must be laned, not stacked on top of one another.
-    grep -q 'left:50%;width:50%' "$out" || { echo "FAIL: $out does not lane overlapping events side by side"; exit 1; }
+    # The quadrant is deliberately single-lane: too narrow for two.
+    if [ "$layout" != "quadrant" ]; then
+        grep -q 'data-entry="1"' "$out" || { echo "FAIL: $out never uses a second lane"; exit 1; }
+    fi
 
     # The window is today..today+N; anything outside it must not render.
     if grep -q 'should not render' "$out"; then

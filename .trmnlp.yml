@@ -59,6 +59,30 @@ variables:
         end: 10:00 AM
         start_full: '2026-09-07T09:00:00-05:00'
         end_full: '2026-09-07T10:00:00-05:00'
+      - summary: Back to back one
+        description: ''
+        calname: work@google.com
+        all_day: false
+        start: 10:00 AM
+        end: 10:15 AM
+        start_full: '2026-09-09T10:00:00-05:00'
+        end_full: '2026-09-09T10:15:00-05:00'
+      - summary: Back to back two
+        description: ''
+        calname: work@google.com
+        all_day: false
+        start: 10:15 AM
+        end: 10:30 AM
+        start_full: '2026-09-09T10:15:00-05:00'
+        end_full: '2026-09-09T10:30:00-05:00'
+      - summary: Back to back three
+        description: ''
+        calname: work@google.com
+        all_day: false
+        start: 10:30 AM
+        end: 10:45 AM
+        start_full: '2026-09-09T10:30:00-05:00'
+        end_full: '2026-09-09T10:45:00-05:00'
       - summary: Dentist
         description: Cleaning, 2nd floor
         calname: you@gmail.com
