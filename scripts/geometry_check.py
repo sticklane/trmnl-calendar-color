@@ -41,6 +41,8 @@ def axis_range(mode, window):
             continue
         s = minutes(ev['start_full'])
         e = minutes(ev['end_full']) if ev.get('end_full') else s + 60
+        if e - s < 5:          # zero-length events never move the axis
+            continue
         lo, hi = min(lo, s), max(hi, e)
     if hi < 0:
         return (8, 18)

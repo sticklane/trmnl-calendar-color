@@ -30,6 +30,7 @@ SHARED = """{%- assign src = google_calendar_12345 -%}
 {%- assign HOUR_H_MIN = 9 -%}
 {%- assign LINE_H = 12 -%}
 {%- assign BLOCK_GAP = 1 -%}
+{%- assign MIN_AXIS_DUR = 5 -%}   {%- comment -%} minutes: shorter than this and the event does not move the axis {%- endcomment -%}
 """
 
 LAYOUTS = {

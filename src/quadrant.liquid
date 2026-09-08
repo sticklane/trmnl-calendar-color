@@ -49,6 +49,7 @@
 {%- assign HOUR_H_MIN = 9 -%}
 {%- assign LINE_H = 12 -%}
 {%- assign BLOCK_GAP = 1 -%}
+{%- assign MIN_AXIS_DUR = 5 -%}   {%- comment -%} minutes: shorter than this and the event does not move the axis {%- endcomment -%}
 
 {%- comment -%} ---- this layout ---- {%- endcomment -%}
 {%- assign VIEW = "quadrant" -%}
@@ -138,6 +139,14 @@
   {%- assign s1 = tb[0] | times: 60 | plus: tb[1] -%}
   {%- assign te = ev.end_full | split: "T" | last | split: ":" -%}
   {%- if ev.end_full == blank -%}{%- assign e1 = s1 | plus: 60 -%}{%- else -%}{%- assign e1 = te[0] | times: 60 | plus: te[1] -%}{%- endif -%}
+  {%- comment -%}
+    A zero-length or near-zero event does not move the axis. Google emits
+    a midnight-to-midnight "Busy" for some all-day-ish entries, and one of
+    those was dragging the axis down to 12am and costing seven empty hours
+    at the top - and the evening blocks at the bottom.
+  {%- endcomment -%}
+  {%- assign dur = e1 | minus: s1 -%}
+  {%- if dur < MIN_AXIS_DUR -%}{%- continue -%}{%- endif -%}
   {%- if s1 < win_min -%}{%- assign win_min = s1 -%}{%- endif -%}
   {%- if e1 > win_max -%}{%- assign win_max = e1 -%}{%- endif -%}
 {%- endfor -%}
@@ -376,7 +385,13 @@
               {%- if e1 <= s1 -%}{%- assign e1 = s1 | plus: 30 -%}{%- endif -%}
               {%- assign vs = s1 -%}{%- if vs < START_MIN -%}{%- assign vs = START_MIN -%}{%- endif -%}
               {%- assign ve = e1 -%}{%- if ve > END_MIN -%}{%- assign ve = END_MIN -%}{%- endif -%}
-              {%- if ve <= START_MIN or vs >= END_MIN -%}{%- continue -%}{%- endif -%}
+              {%- comment -%}
+                Anything the axis does not cover - including the zero-length
+                events the axis scan ignored - is counted, never dropped.
+              {%- endcomment -%}
+              {%- if ve <= START_MIN or vs >= END_MIN -%}
+                {%- assign more = more | plus: 1 -%}{%- continue -%}
+              {%- endif -%}
 
               {%- comment -%}
                 The title comes first and is the last thing to give way.
