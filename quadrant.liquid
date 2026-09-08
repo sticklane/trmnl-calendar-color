@@ -1,0 +1,159 @@
+{%- comment -%}
+=====================================================================
+ Google Calendar fork — per-calendar color coding (TRMNL Plugin Merge)
+ Layout: QUADRANT
+=====================================================================
+ SETUP
+   1. Connect Google Calendar natively, pick your calendars, hide it in Playlists.
+   2. New Private Plugin -> Strategy: Plugin Merge.
+   3. Open the "Merge Variables" dropdown, find your node, e.g.
+      google_calendar_12345 -> replace the placeholder below.
+   4. Fill CAL_MAP with calendar-id=token pairs. Calendar ids are the
+      `calname` values in the JSON (usually the calendar's email/id).
+      Any calendar you don't list falls back to the FALLBACK cycle.
+
+ TOKENS (framework v3): black, gray-10..gray-75 (steps of 5), white,
+   red orange yellow lime green cyan blue violet purple pink,
+   or hue-step like blue-40. On 1-bit + TRMNL X grayscale panels,
+   hues collapse to their lightness -> keep grays FAR apart
+   (black / gray-30 / gray-50 / gray-65) and use glyphs too.
+=====================================================================
+{%- endcomment -%}
+
+{%- assign src = google_calendar_12345 -%}
+{%- assign CAL_MAP = "you@gmail.com=black,work@google.com=gray-40,abc123@group.calendar.google.com=gray-65" | split: "," -%}
+{%- assign FALLBACK = "black,gray-40,gray-65,gray-25,gray-55" | split: "," -%}
+{%- assign GLYPHS = "■,●,▲,◆,★,▼,♦,✚" | split: "," -%}
+{%- assign MODE = "both" -%}            {%- comment -%} bar | glyph | both | fill {%- endcomment -%}
+{%- assign SHOW_LEGEND = false -%}
+{%- assign SHOW_TIME = true -%}
+{%- assign SHOW_DESC = false -%}
+{%- assign DAY_FMT = "%A, %B %-d" -%}
+{%- assign VIEW = "quadrant" -%}          {%- comment -%} full | half_horizontal | half_vertical | quadrant {%- endcomment -%}
+{%- assign MAX_DAYS = 1 -%}           {%- comment -%} 0 = no cap; quadrant/half use 1-3 {%- endcomment -%}
+{%- assign MAX_COLS = 1 -%}
+{%- assign HEAD_SIZE = "small" -%}
+{%- assign BAR_WIDTH = 12 -%}        {%- comment -%} px. OG 1-bit: keep >= 12 so dither patterns read; X: 6-8 is fine {%- endcomment -%}
+{%- assign TITLE_SIZE = "xsmall" -%}
+
+{%- comment -%} ---- derived: resolve one token + glyph per calendar, once ---- {%- endcomment -%}
+{%- assign events = src.events -%}
+{%- assign names = src.calendar_names -%}
+{%- assign today = src.today_in_tz -%}
+{%- assign cals = events | map: "calname" | uniq -%}
+
+{%- assign mapped = "" -%}
+{%- for pair in CAL_MAP -%}{%- assign kv = pair | split: "=" -%}{%- assign mapped = mapped | append: "|" | append: kv[1] | append: "|" -%}{%- endfor -%}
+{%- assign fb = "" -%}
+{%- for f in FALLBACK -%}{%- assign needle = "|" | append: f | append: "|" -%}{%- unless mapped contains needle -%}{%- assign fb = fb | append: f | append: "," -%}{%- endunless -%}{%- endfor -%}
+{%- assign FB = fb | split: "," -%}
+{%- if FB.size == 0 -%}{%- assign FB = FALLBACK -%}{%- endif -%}
+
+{%- assign tokens_s = "" -%}
+{%- assign fbi = 0 -%}
+{%- for c in cals -%}
+  {%- assign t = "" -%}
+  {%- for pair in CAL_MAP -%}{%- assign kv = pair | split: "=" -%}{%- if kv[0] == c -%}{%- assign t = kv[1] -%}{%- break -%}{%- endif -%}{%- endfor -%}
+  {%- if t == "" -%}{%- assign i = fbi | modulo: FB.size -%}{%- assign t = FB[i] -%}{%- assign fbi = fbi | plus: 1 -%}{%- endif -%}
+  {%- assign tokens_s = tokens_s | append: t | append: "," -%}
+{%- endfor -%}
+{%- assign CAL_TOKENS = tokens_s | split: "," -%}
+
+<div class="view view--{{ VIEW }}">
+  <div class="layout">
+    <div class="columns" data-overflow-max-cols="{{ MAX_COLS }}" data-overflow-counter="true">
+      <div class="column">
+        {%- assign prev_day = "" -%}
+        {%- assign idx = 0 -%}
+        {%- assign day_count = 0 -%}
+        {%- for ev in events -%}
+          {%- assign day_key = ev.start_full | date: "%Y-%m-%d" -%}
+          {%- if day_key != prev_day -%}{%- assign day_count = day_count | plus: 1 -%}{%- endif -%}
+          {%- if MAX_DAYS > 0 and day_count > MAX_DAYS -%}{%- break -%}{%- endif -%}
+
+          {%- comment -%} look up this event's calendar {%- endcomment -%}
+          {%- assign ci = 0 -%}
+          {%- for c in cals -%}{%- if c == ev.calname -%}{%- assign ci = forloop.index0 -%}{%- break -%}{%- endif -%}{%- endfor -%}
+          {%- assign token = CAL_TOKENS[ci] -%}
+          {%- assign gi = ci | modulo: GLYPHS.size -%}
+          {%- assign glyph = GLYPHS[gi] -%}
+
+          {%- comment -%} day header {%- endcomment -%}
+          {%- if day_key != prev_day -%}
+            {%- assign day_label = ev.start_full | date: DAY_FMT -%}
+            {%- if day_key == today -%}
+              <span class="label label--{{ HEAD_SIZE }} label--filled group-header" data-group-header="true">Today · {{ day_label }}</span>
+            {%- else -%}
+              <span class="label label--{{ HEAD_SIZE }} group-header" data-group-header="true">{{ day_label }}</span>
+            {%- endif -%}
+            {%- assign prev_day = day_key -%}
+          {%- endif -%}
+
+          {%- comment -%} event row {%- endcomment -%}
+          {%- if MODE == "fill" -%}
+            <div class="item bg--{{ token }} rounded--small" style="padding:4px 8px">
+              <div class="content">
+                <span class="title title--small" data-clamp="1">{{ glyph }} {{ ev.summary }}</span>
+                {%- if SHOW_TIME and ev.all_day != true -%}
+                  <span class="label label--small">{{ ev.start }} – {{ ev.end }}</span>
+                {%- elsif ev.all_day -%}
+                  <span class="label label--small">All day</span>
+                {%- endif -%}
+              </div>
+            </div>
+          {%- else -%}
+            <div class="item">
+              {%- if MODE == "bar" or MODE == "both" -%}
+                <div class="bg--{{ token }} rounded--small" style="width:{{ BAR_WIDTH }}px;align-self:stretch;flex-shrink:0"></div>
+              {%- endif -%}
+              <div class="meta">
+                {%- if MODE == "glyph" or MODE == "both" -%}
+                  <span class="index text--{{ token }}">{{ glyph }}</span>
+                {%- else -%}
+                  {%- assign idx = idx | plus: 1 -%}
+                  <span class="index">{{ idx }}</span>
+                {%- endif -%}
+              </div>
+              <div class="content">
+                <span class="title title--{{ TITLE_SIZE }}" data-clamp="2">{{ ev.summary }}</span>
+                {%- if SHOW_DESC and ev.description != blank -%}
+                  <span class="description" data-clamp="1">{{ ev.description }}</span>
+                {%- endif -%}
+                {%- if SHOW_TIME -%}
+                  <div class="flex gap--xsmall">
+                    {%- if ev.all_day -%}
+                      <span class="label label--small label--underline">All day</span>
+                    {%- else -%}
+                      <span class="label label--small label--underline">{{ ev.start }} – {{ ev.end }}</span>
+                    {%- endif -%}
+                  </div>
+                {%- endif -%}
+              </div>
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+
+        {%- if events.size == 0 -%}
+          <div class="layout layout--center layout--middle h--full">
+            <span class="title text--gray-50">No upcoming events</span>
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+
+  <div class="title_bar">
+    <img class="image" src="https://usetrmnl.com/images/plugins/google_calendar--render.svg">
+    <span class="title">{{ src.instance_name | default: "Calendar" }}</span>
+    {%- if SHOW_LEGEND -%}
+      <span class="instance">
+        {%- for c in cals -%}
+          {%- assign token = CAL_TOKENS[forloop.index0] -%}
+          {%- assign gi = forloop.index0 | modulo: GLYPHS.size -%}
+          {%- assign label = names[c] | default: c | split: "@" | first -%}
+          <span class="text--{{ token }}">{{ GLYPHS[gi] }}</span>&nbsp;{{ label }}{% unless forloop.last %}&nbsp;&nbsp;{% endunless %}
+        {%- endfor -%}
+      </span>
+    {%- endif -%}
+  </div>
+</div>
