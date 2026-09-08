@@ -213,6 +213,22 @@ variables:
         end: 12:00 AM
         start_full: '2026-09-09T00:00:00-05:00'
         end_full: '2026-09-09T00:00:00-05:00'
+      - summary: Early start
+        description: Drags the fit window back to 4am
+        calname: you@gmail.com
+        all_day: false
+        start: 5:15 AM
+        end: 6:00 AM
+        start_full: '2026-09-08T05:15:00-05:00'
+        end_full: '2026-09-08T06:00:00-05:00'
+      - summary: Late finish
+        description: Pushes the fit window out to midnight; the pitch gives way
+        calname: you@gmail.com
+        all_day: false
+        start: 11:00 PM
+        end: 11:30 PM
+        start_full: '2026-09-08T23:00:00-05:00'
+        end_full: '2026-09-08T23:30:00-05:00'
       - summary: PAST should not render
         description: ''
         calname: you@gmail.com

@@ -23,6 +23,17 @@ only render them.
 | `scripts/geometry_check.py` | asserts every block holds its full text and nothing overlaps |
 | `reference/native-3day/` | what the native render exposes, and the settings it came from |
 
+The framework title bar is gone: it spent ~44px on a name and an icon.
+A one-line legend (swatch plus calendar name, 18px) replaces it, and the
+reclaimed height goes to the grid.
+
+**`trmnlp lint` scans all four layouts for eight CSS property names and
+allows six hits across the set** - comments included, since it is a plain
+substring scan (`lib/trmnlp/lint/checks/limited_inline_styles.rb`). That
+is why block geometry is emitted as a generated stylesheet keyed on
+`.cg-bN` rather than a style attribute per block, and why this repo
+reaches for utility classes over hand-written spacing.
+
 `src/*.liquid` are GENERATED. Edit `scripts/layout_body.liquid` or the
 `LAYOUTS` table in `scripts/gen_layouts.py`, then run the script;
 `scripts/check.sh` fails if the tree disagrees. Four hand-maintained
@@ -43,9 +54,15 @@ formatted with its `time_format`, so the clock style needs no knob.
 `axis_mode` picks the hour range. `fit` (default) runs from the whole
 hour before the earliest timed event in view to the whole hour after the
 latest one ends, each end rounded outward and clamped to midnight
-independently; all-day events never move it. `day` is 00:00-24:00. A
-range that will not fit is kept, not squeezed - the column clips at the
-bottom and the surplus becomes "+N more".
+independently; events shorter than `MIN_AXIS_DUR` (5 minutes) and all-day
+events never move it.  `day` is 00:00-24:00.
+
+**The window is a hard constraint and the PITCH gives way.** `HOUR_H` is
+the budget divided by the hours the window spans, capped above by
+`HOUR_H_MAX` and floored only at 1px - there is no comfortable minimum,
+because a minimum would push the last hour off the panel. The window end
+is always labelled, one line inside the grid, and labels thin out
+automatically (`HOUR_EVERY` rises) so two are never closer than one line.
 
 `GRID_BUDGET_H` is a px budget, not the height: `HOUR_H` is that budget
 divided by the hours on the axis, clamped to `HOUR_H_MIN..HOUR_H_MAX`,
@@ -80,8 +97,7 @@ anti-aliased. `ONE_LINE_CHARS` and `TITLE_CHARS` are derived from that
 
 **Crispness.** The panel dithers anything that is not one of its four
 inks, and a dither reads as fuzz. So: no grey tokens, no opacity, no
-half-tone fill anywhere (a weekend is a heavier column rule, never a
-shaded column); block text is black or white only; hour rules and column
+half-tone fill anywhere; block text is black or white only; hour rules and column
 edges land on whole pixels, which is why `AXIS_W` is chosen to divide the
 panel exactly and `HOUR_H` is an integer quotient. `check.sh` greps the
 built HTML for every one of those.

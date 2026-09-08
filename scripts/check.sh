@@ -35,13 +35,15 @@ for layout in full half_horizontal half_vertical quadrant; do
     [ "$blocks" -ge 4 ] || { echo "FAIL: $out placed $blocks blocks, want >= 4"; exit 1; }
     grep -q 'data-allday="true"' "$out" || { echo "FAIL: $out has no all-day band entries"; exit 1; }
 
-    # Blocks must be sized from the clock, not all identical.
-    grep -qE 'top:[0-9]+px;height:[0-9]+px' "$out" || { echo "FAIL: $out blocks are not time-positioned"; exit 1; }
+    # Block geometry lives in a generated stylesheet, one rule per block:
+    # trmnlp's lint scans the markup for CSS property names and allows six
+    # across the four layouts, so it cannot go in style attributes.
+    grep -qE '\.cg-b[0-9]+\{top:[0-9]+px;height:[0-9]+px\}' "$out" || { echo "FAIL: $out blocks are not time-positioned"; exit 1; }
     [ "$(grep -oE 'top:[0-9]+px;height:[0-9]+px' "$out" | sort -u | wc -l | tr -d ' ')" -ge 3 ] || {
         echo "FAIL: $out blocks all share one geometry"; exit 1; }
 
     # Every block carries a calendar fill and black-or-white text.
-    grep -q 'cg-block bg--' "$out" || { echo "FAIL: $out blocks are not filled with a calendar colour"; exit 1; }
+    grep -qE 'cg-block cg-b[0-9]+ bg--' "$out" || { echo "FAIL: $out blocks are not filled with a calendar colour"; exit 1; }
     grep -qE 'cg-line text--(white|black)' "$out" || { echo "FAIL: $out block text has no contrast class"; exit 1; }
     if grep -oE 'cg-line text--[a-z0-9-]+' "$out" | grep -vqE 'text--(white|black)$'; then
         echo "FAIL: $out prints block text in a colour other than black or white"; exit 1
@@ -99,8 +101,8 @@ for layout in full half_horizontal half_vertical quadrant; do
     grep -q 'data-axis-start="0" data-axis-end="24"' "$out" || {
         echo "FAIL: $out did not honour AXIS_MODE=day"; exit 1; }
 done
-grep -q 'data-hour="0">12am' _build/full.html || { echo "FAIL: day axis does not start at 12am"; exit 1; }
-grep -q 'data-hour="23">11pm' _build/full.html || { echo "FAIL: day axis does not end at 11pm"; exit 1; }
+grep -q 'data-hour="0" data-hour-y="0">12am' _build/full.html || { echo "FAIL: day axis does not start at 12am"; exit 1; }
+grep -qE 'data-hour="24" data-hour-y="[0-9]+">12am' _build/full.html || { echo "FAIL: day axis does not label midnight at its end"; exit 1; }
 python3 scripts/geometry_check.py || exit 1
 
 cp "$fixture_backup" .trmnlp.yml

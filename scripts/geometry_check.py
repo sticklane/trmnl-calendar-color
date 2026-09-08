@@ -69,7 +69,7 @@ for f in sorted((ROOT / '_build').glob('*.html')):
         continue
     title_chars = int(m.group(1))
 
-    for L in re.findall(r'data-hour="\d+">([^<]*)</span>', h) or ['']:
+    for L in re.findall(r'data-hour="\d+" data-hour-y="\d+">([^<]*)</span>', h) or ['']:
         if not re.fullmatch(r'\d{1,2}(am|pm)', L.strip()):
             fail.append(f'{name}: clipped or odd hour label {L!r}')
 
@@ -80,12 +80,25 @@ for f in sorted((ROOT / '_build').glob('*.html')):
     want = axis_range(mode, window)
     if got != want:
         fail.append(f'{name}: axis_mode {mode} gave hours {got}, expected {want}')
-    hours = sorted(int(x) for x in re.findall(r'data-hour="(\d+)"', h))
-    every = hours[1] - hours[0] if len(hours) > 1 else 1
+    labels = [(int(a), int(b)) for a, b in
+              re.findall(r'data-hour="(\d+)" data-hour-y="(\d+)"', h)]
+    hours = [a for a, _ in labels]
+    grid_h = int(re.search(r'data-grid-h="(\d+)"', h).group(1))
+    line_h = int(re.search(r'data-line-h="(\d+)"', h).group(1))
     if hours and hours[0] != want[0]:
         fail.append(f'{name}: first hour label {hours[0]}, expected {want[0]}')
-    if hours and not 0 <= want[1] - 1 - hours[-1] < every:
-        fail.append(f'{name}: last hour label {hours[-1]} does not reach {want[1] - 1}')
+    # The window is a hard constraint: its END is labelled, inside the grid.
+    if hours and hours[-1] != want[1]:
+        fail.append(f'{name}: last hour label {hours[-1]}, expected the window end {want[1]}')
+    for hh, hy in labels:
+        if hy + line_h > grid_h:
+            fail.append(f'{name}: hour label {hh} sits at y={hy}, past the {grid_h}px grid')
+        if hy < 0:
+            fail.append(f'{name}: hour label {hh} sits above the grid')
+    ys = sorted(hy for _, hy in labels)
+    for y1, y2 in zip(ys, ys[1:]):
+        if y2 - y1 < line_h:
+            fail.append(f'{name}: hour labels {y1}px and {y2}px are closer than one line')
 
     drawn_titles, more_total = set(), 0
     cols = re.split(r'<div class="cg-col[^"]*" data-grid-col="', h)[1:]

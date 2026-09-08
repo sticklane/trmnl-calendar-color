@@ -19,7 +19,6 @@ SHARED = """{%- assign src = google_calendar_12345 -%}
 {%- comment -%} ---- layout ---- {%- endcomment -%}
 {%- assign SHOW_ALLDAY = true -%}
 {%- assign HIGHLIGHT_TODAY = true -%}
-{%- assign MARK_WEEKENDS = true -%}
 {%- assign DAY_FMT = "%a %-m/%-d" -%}
 {%- assign HEAD_SIZE = "small" -%}   {%- comment -%} label--small is the framework's 12px pixel-hinted
                                           face (TRMNL12). label--xsmall is an ALIAS of the 16px one, so
@@ -27,14 +26,13 @@ SHARED = """{%- assign src = google_calendar_12345 -%}
 {%- assign AXIS_MODE_FALLBACK = "fit" -%}
 {%- assign EMPTY_START_H = 8 -%}
 {%- assign EMPTY_END_H = 18 -%}
-{%- assign HOUR_H_MIN = 9 -%}
 {%- assign LINE_H = 12 -%}
 {%- assign BLOCK_GAP = 1 -%}
 {%- assign MIN_AXIS_DUR = 5 -%}   {%- comment -%} minutes: shorter than this and the event does not move the axis {%- endcomment -%}
 """
 
 LAYOUTS = {
-    # view              days panelW axis panelH head titlebar hmax every one_line title legend maxblock
+    # view              days panelW axis panelH head (unused) hmax every one_line title legend maxblock
     'full':            (3, 800, 41, 480, 24, 44, 24, 1, 36, 35, 'true', 38),
     'half_horizontal': (3, 800, 38, 240, 20, 36, 16, 3, 36, 35, 'true', 26),
     'half_vertical':   (2, 400, 40, 480, 24, 44, 22, 2, 25, 24, 'false', 38),
@@ -80,7 +78,6 @@ KNOBS = """{%- comment -%} ---- this layout ---- {%- endcomment -%}
 {%- assign AXIS_W = @AXIS@ -%}           {%- comment -%} chosen so (PANEL_W - AXIS_W) / NUM_DAYS is exact {%- endcomment -%}
 {%- assign PANEL_H = @PANELH@ -%}        {%- comment -%} panel height; the grid gets what the chrome leaves {%- endcomment -%}
 {%- assign HEAD_H = @HEADH@ -%}          {%- comment -%} day-header row {%- endcomment -%}
-{%- assign TITLE_H = @TITLEH@ -%}         {%- comment -%} framework title bar {%- endcomment -%}
 {%- assign HOUR_H_MAX = @HMAX@ -%}         {%- comment -%} px per hour ceiling {%- endcomment -%}
 {%- assign HOUR_EVERY = @EVERY@ -%}         {%- comment -%} label every Nth hour {%- endcomment -%}
 {%- assign ONE_LINE_CHARS = @ONELINE@ -%}   {%- comment -%} "start - end  Title" that fits the column on one line {%- endcomment -%}
@@ -95,7 +92,7 @@ def render(view):
     (days, panel, axis, panel_h, head_h, title_h, hmax, every,
      one_line, title, legend, maxblock) = LAYOUTS[view]
     subs = {'@VIEW@': view, '@DAYS@': days, '@PANEL@': panel, '@AXIS@': axis,
-            '@PANELH@': panel_h, '@HEADH@': head_h, '@TITLEH@': title_h,
+            '@PANELH@': panel_h, '@HEADH@': head_h,
             '@HMAX@': hmax, '@EVERY@': every,
             '@ONELINE@': one_line, '@TITLE@': title, '@LEGEND@': legend,
             '@MAXBLOCK@': maxblock}
