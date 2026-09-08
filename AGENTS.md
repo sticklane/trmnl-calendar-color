@@ -13,32 +13,43 @@ only render them.
 
 | path | what |
 |---|---|
-| `src/full.liquid` | full layout, 3 day columns, 17px/hour, hourly labels |
-| `src/half_horizontal.liquid` | half layout, 3 day columns, 7px/hour, every 3rd label |
-| `src/half_vertical.liquid` | half layout, 2 day columns, 16px/hour, legend off |
-| `src/quadrant.liquid` | quadrant layout, 2 day columns, 6px/hour, legend off |
+| `src/full.liquid` | full layout, 3 day columns, ~306px grid, hourly labels |
+| `src/half_horizontal.liquid` | half layout, 3 day columns, ~112px grid, every 3rd label |
+| `src/half_vertical.liquid` | half layout, 2 day columns, ~288px grid, legend off |
+| `src/quadrant.liquid` | quadrant layout, 2 day columns, ~104px grid, legend off |
 | `src/settings.yml` | plugin metadata read by trmnlp. Not the deploy path |
 | `.trmnlp.yml` | local-preview fixture that stands in for the merge variable |
 | `bin/trmnlp` | gem-or-Docker wrapper for the `trmnlp` CLI |
 | `scripts/check.sh` | the canonical check |
+| `scripts/geometry_check.py` | asserts block rectangles never intersect |
 
 Each layout is the same template with a different knob block at the top
-(`NUM_DAYS`, `HOUR_H`, `HOUR_EVERY`, `SHOW_LEGEND`, `CAL_MAP`, …). A change
+(`NUM_DAYS`, `GRID_TARGET_H`, `HOUR_EVERY`, `SHOW_LEGEND`, `CAL_MAP`, …). A change
 to the render body has to land in all four files.
 
 The knobs mirror the native Google Calendar instance's own display
 settings, so the private plugin and the native one agree: `NUM_DAYS = 3`
 for its `three_day_week` layout, `DAY_FMT` for `date_format: short`,
 `HIGHLIGHT_TODAY` and `SHADE_WEEKENDS` for its matching toggles, and
-`GRID_START_H` / `GRID_END_H` (5 and 23) for its `scroll_time` and
+`WIDE_START_H` / `WIDE_END_H` (5 and 23) for its `scroll_time` and
 `scroll_time_end`. Event times are printed straight from `ev.start`,
 which the native plugin has already formatted with its `time_format`, so
 the clock style needs no knob.
 
-`HOUR_H` is pixels per hour and the grid height is derived from it. Do
-not set a height directly: the hour rules are a repeating gradient at a
-fixed pixel pitch, and a height that is not a whole multiple of the hour
-count slides the rules out from under the events.
+The axis uses `TIGHT_START_H`..`TIGHT_END_H` (6-22) when every event in
+the window fits inside it, which buys a couple more pixels per hour, and
+widens to the native range only when something starts early or runs late.
+
+`GRID_TARGET_H` is a px budget, not the height: `HOUR_H` is floored from
+it and the real `GRID_H` is `HOUR_H * HOURS`. Setting a height directly
+desynchronises the hour rules (a repeating gradient at a fixed pitch)
+from the axis cells and the block maths.
+
+Overlapping events are laned by an interval-graph sweep: each event takes
+the lowest lane already free at its start, so lanes are reused, and a
+cluster's width divisor is its own peak concurrency, so a busy cluster
+does not narrow a quiet neighbour. Rectangles must never intersect —
+`scripts/geometry_check.py` fails the build if any pair does.
 
 ## Commands
 

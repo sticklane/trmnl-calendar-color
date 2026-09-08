@@ -38,7 +38,7 @@ for layout in full half_horizontal half_vertical quadrant; do
     [ "$(grep -oE 'top:[0-9]+px;height:[0-9]+px' "$out" | sort -u | wc -l | tr -d ' ')" -ge 3 ] || {
         echo "FAIL: $out blocks all share one geometry"; exit 1; }
 
-    # Two events starting at 9:00 on the same day must share the column.
+    # Overlapping events must be laned, not stacked on top of one another.
     grep -q 'left:50%;width:50%' "$out" || { echo "FAIL: $out does not lane overlapping events side by side"; exit 1; }
 
     # The window is today..today+N; anything outside it must not render.
@@ -46,5 +46,7 @@ for layout in full half_horizontal half_vertical quadrant; do
         echo "FAIL: $out shows an event outside the day window"; exit 1
     fi
 done
+
+python3 scripts/geometry_check.py || exit 1
 
 echo "OK: lint clean, 4 layouts rendered from the .trmnlp.yml fixture"

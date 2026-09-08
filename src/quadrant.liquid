@@ -22,8 +22,10 @@
    hues collapse to their lightness -> keep grays FAR apart
    (black / gray-30 / gray-50 / gray-65) and use glyphs too.
 
- GRID_START_H / GRID_END_H mirror the native instance's scroll_time and
- scroll_time_end. Event times print from ev.start / ev.end, which the
+ The axis uses the TIGHT range when every event in the window fits it,
+ which buys ~2 more px per hour, and falls back to the WIDE range (the
+ native instance's scroll_time..scroll_time_end) only when something
+ starts early or runs late. Event times print from ev.start, which the
  native plugin has already formatted with its own time_format.
 =====================================================================
 {%- endcomment -%}
@@ -35,16 +37,17 @@
 {%- assign SHOW_LEGEND = false -%}
 {%- assign SHOW_ALLDAY = true -%}
 {%- assign NUM_DAYS = 2 -%}           {%- comment -%} day columns, starting today {%- endcomment -%}
-{%- assign GRID_START_H = 5 -%}       {%- comment -%} native scroll_time 05:00 {%- endcomment -%}
-{%- assign GRID_END_H = 23 -%}        {%- comment -%} native scroll_time_end 23:00 {%- endcomment -%}
-{%- assign HOUR_H = 6 -%}            {%- comment -%} px per hour. Grid height is derived from it so the
-                                          hour rules, the axis cells and the block maths all land on the
-                                          same integer scale; a hand-set height that is not a multiple of
-                                          the hour count drifts the rules against the events. {%- endcomment -%}
+{%- assign TIGHT_START_H = 6 -%}      {%- comment -%} preferred axis when everything fits {%- endcomment -%}
+{%- assign TIGHT_END_H = 22 -%}
+{%- assign WIDE_START_H = 5 -%}       {%- comment -%} native scroll_time 05:00 {%- endcomment -%}
+{%- assign WIDE_END_H = 23 -%}        {%- comment -%} native scroll_time_end 23:00 {%- endcomment -%}
+{%- assign GRID_TARGET_H = 104 -%}    {%- comment -%} px budget for the grid body. HOUR_H and the real
+                                          GRID_H are derived from it so the hour rules, the axis cells
+                                          and the block maths all sit on one integer scale. {%- endcomment -%}
 {%- assign HOUR_EVERY = 3 -%}         {%- comment -%} label every Nth hour {%- endcomment -%}
-{%- assign AXIS_W = 24 -%}
+{%- assign AXIS_W = 22 -%}
 {%- assign MIN_BLOCK_H = 5 -%}
-{%- assign TIME_BLOCK_H = 999 -%}      {%- comment -%} blocks shorter than this show title only {%- endcomment -%}
+{%- assign TWO_LINE_H = 999 -%}        {%- comment -%} below this a block is one line: "time title" {%- endcomment -%}
 {%- assign DAY_FMT = "%a %-m/%-d" -%} {%- comment -%} native date_format: short {%- endcomment -%}
 {%- assign HIGHLIGHT_TODAY = true -%}
 {%- assign SHADE_WEEKENDS = true -%}
@@ -57,12 +60,9 @@
 {%- assign names = src.calendar_names -%}
 {%- assign today = src.today_in_tz | split: "T" | first -%}
 {%- assign today_ts = today | date: "%s" | times: 1 -%}
+{%- assign last_off = NUM_DAYS | minus: 1 | times: 86400 -%}
+{%- assign last_day = today_ts | plus: last_off | date: "%Y-%m-%d" -%}
 {%- assign cals = events | map: "calname" | uniq -%}
-{%- assign START_MIN = GRID_START_H | times: 60 -%}
-{%- assign END_MIN = GRID_END_H | times: 60 -%}
-{%- assign SPAN_MIN = END_MIN | minus: START_MIN -%}
-{%- assign HOURS = GRID_END_H | minus: GRID_START_H -%}
-{%- assign GRID_H = HOUR_H | times: HOURS -%}
 
 {%- assign mapped = "" -%}
 {%- for pair in CAL_MAP -%}{%- assign kv = pair | split: "=" -%}{%- assign mapped = mapped | append: "|" | append: kv[1] | append: "|" -%}{%- endfor -%}
@@ -81,6 +81,39 @@
 {%- endfor -%}
 {%- assign CAL_TOKENS = tokens_s | split: "," -%}
 
+{%- comment -%}
+  ---- pick the axis range: tight unless something in the window falls
+  outside it. Scanning once here keeps the decision identical for the
+  axis, the hour rules and every block.
+{%- endcomment -%}
+{%- assign win_min = 9999 -%}
+{%- assign win_max = 0 -%}
+{%- for ev in events -%}
+  {%- if ev.all_day -%}{%- continue -%}{%- endif -%}
+  {%- assign d = ev.start_full | split: "T" | first -%}
+  {%- if d < today or d > last_day -%}{%- continue -%}{%- endif -%}
+  {%- assign tb = ev.start_full | split: "T" | last | split: ":" -%}
+  {%- assign s1 = tb[0] | times: 60 | plus: tb[1] -%}
+  {%- assign te = ev.end_full | split: "T" | last | split: ":" -%}
+  {%- if ev.end_full == blank -%}{%- assign e1 = s1 | plus: 60 -%}{%- else -%}{%- assign e1 = te[0] | times: 60 | plus: te[1] -%}{%- endif -%}
+  {%- if s1 < win_min -%}{%- assign win_min = s1 -%}{%- endif -%}
+  {%- if e1 > win_max -%}{%- assign win_max = e1 -%}{%- endif -%}
+{%- endfor -%}
+{%- assign TIGHT_S = TIGHT_START_H | times: 60 -%}
+{%- assign TIGHT_E = TIGHT_END_H | times: 60 -%}
+{%- assign GRID_START_H = WIDE_START_H -%}
+{%- assign GRID_END_H = WIDE_END_H -%}
+{%- if win_min >= TIGHT_S and win_max <= TIGHT_E -%}
+  {%- assign GRID_START_H = TIGHT_START_H -%}
+  {%- assign GRID_END_H = TIGHT_END_H -%}
+{%- endif -%}
+{%- assign START_MIN = GRID_START_H | times: 60 -%}
+{%- assign END_MIN = GRID_END_H | times: 60 -%}
+{%- assign SPAN_MIN = END_MIN | minus: START_MIN -%}
+{%- assign HOURS = GRID_END_H | minus: GRID_START_H -%}
+{%- assign HOUR_H = GRID_TARGET_H | divided_by: HOURS -%}
+{%- assign GRID_H = HOUR_H | times: HOURS -%}
+
 <style>
   /* Framework utility classes carry padding, text alignment and fills so
      this block stays clear of the properties trmnlp's lint counts. */
@@ -97,7 +130,10 @@
   /* Pinned, not flexed: a flex axis compresses when the view is shorter
      than the grid, and then the labels no longer line up with the hour
      rules, which are drawn at a fixed pixel pitch. */
-  .cg-hour { flex: 0 0 var(--cg-hour-h); height: var(--cg-hour-h); line-height: 1; }
+  .cg-hour {
+    flex: 0 0 var(--cg-hour-h); height: var(--cg-hour-h);
+    line-height: 1; white-space: nowrap; overflow: visible;
+  }
   .cg-col {
     flex: 1 1 0; min-width: 0; position: relative;
     border-left: 1px solid currentColor;
@@ -176,11 +212,6 @@
       {%- comment -%} ---------- hour grid ---------- {%- endcomment -%}
       <div class="cg-row cg-grid">
 
-        {%- comment -%}
-          One flex cell per hour, so the labels line up with the
-          repeating-gradient rules on the columns without absolute
-          positioning or an opacity override.
-        {%- endcomment -%}
         <div class="cg-axis cg-axis--hours">
           {%- for h in (GRID_START_H..GRID_END_H) -%}
             {%- if forloop.last -%}{%- break -%}{%- endif -%}
@@ -190,7 +221,7 @@
               {%- if hmod == 0 -%}
                 {%- assign h12 = h | modulo: 12 -%}
                 {%- if h12 == 0 -%}{%- assign h12 = 12 -%}{%- endif -%}
-                {%- if h < 12 -%}{%- assign ap = "am" -%}{%- else -%}{%- assign ap = "pm" -%}{%- endif -%}
+                {%- if h < 12 -%}{%- assign ap = "a" -%}{%- else -%}{%- assign ap = "p" -%}{%- endif -%}
                 <span class="label label--xsmall text--gray-45" data-hour="{{ h }}">{{ h12 }}{{ ap }}</span>
               {%- endif -%}
             </div>
@@ -206,46 +237,85 @@
           {%- if dow == "0" or dow == "6" -%}{%- assign weekend = true -%}{%- endif -%}
 
           {%- comment -%}
-            Pass 1: how many lanes does this day need? An event's lane is
-            the number of earlier events on the day that overlap it, so
-            the column needs max(lane) + 1 lanes.
+            Pass 1 — interval-graph sweep over the day, in start order.
+
+            lane_ends holds the end minute of each open lane. An event
+            takes the LOWEST lane whose previous event has already
+            finished, so lanes are reused and rectangles never overlap.
+            A cluster closes when an event starts at or after every open
+            lane's end (cluster_max_end); its width divisor is the peak
+            concurrency reached inside it, so a 2-deep cluster does not
+            squeeze a neighbouring 1-deep one.
+
+            recs entries are "index:lane:cluster", clusters are
+            "cluster:lanecount"; pass 2 reads both back by index.
           {%- endcomment -%}
-          {%- assign lanes = 1 -%}
+          {%- assign recs = "" -%}
+          {%- assign clusters = "" -%}
+          {%- assign lane_ends = "" -%}
+          {%- assign cluster_id = 0 -%}
+          {%- assign cluster_max_end = 0 -%}
+          {%- assign cluster_lanes = 0 -%}
+          {%- assign started = false -%}
           {%- for ev in events -%}
             {%- if ev.all_day -%}{%- continue -%}{%- endif -%}
             {%- assign ev_day = ev.start_full | split: "T" | first -%}
             {%- unless ev_day == day_key -%}{%- continue -%}{%- endunless -%}
-            {%- assign me = forloop.index0 -%}
+            {%- assign idx = forloop.index0 -%}
             {%- assign tb = ev.start_full | split: "T" | last | split: ":" -%}
             {%- assign s1 = tb[0] | times: 60 | plus: tb[1] -%}
             {%- assign te = ev.end_full | split: "T" | last | split: ":" -%}
             {%- if ev.end_full == blank -%}{%- assign e1 = s1 | plus: 60 -%}{%- else -%}{%- assign e1 = te[0] | times: 60 | plus: te[1] -%}{%- endif -%}
             {%- if e1 <= s1 -%}{%- assign e1 = s1 | plus: 30 -%}{%- endif -%}
-            {%- assign lane = 0 -%}
-            {%- for f in events -%}
-              {%- if forloop.index0 >= me -%}{%- break -%}{%- endif -%}
-              {%- if f.all_day -%}{%- continue -%}{%- endif -%}
-              {%- assign f_day = f.start_full | split: "T" | first -%}
-              {%- unless f_day == day_key -%}{%- continue -%}{%- endunless -%}
-              {%- assign fs = f.start_full | split: "T" | last | split: ":" -%}
-              {%- assign s2 = fs[0] | times: 60 | plus: fs[1] -%}
-              {%- assign fe = f.end_full | split: "T" | last | split: ":" -%}
-              {%- if f.end_full == blank -%}{%- assign e2 = s2 | plus: 60 -%}{%- else -%}{%- assign e2 = fe[0] | times: 60 | plus: fe[1] -%}{%- endif -%}
-              {%- if e2 <= s2 -%}{%- assign e2 = s2 | plus: 30 -%}{%- endif -%}
-              {%- if s2 < e1 and e2 > s1 -%}{%- assign lane = lane | plus: 1 -%}{%- endif -%}
+
+            {%- if started and s1 >= cluster_max_end -%}
+              {%- assign clusters = clusters | append: cluster_id | append: ":" | append: cluster_lanes | append: "," -%}
+              {%- assign cluster_id = cluster_id | plus: 1 -%}
+              {%- assign lane_ends = "" -%}
+              {%- assign cluster_lanes = 0 -%}
+              {%- assign cluster_max_end = 0 -%}
+            {%- endif -%}
+            {%- assign started = true -%}
+
+            {%- assign LE = lane_ends | split: "," -%}
+            {%- assign chosen = -1 -%}
+            {%- for le in LE -%}
+              {%- assign lev = le | times: 1 -%}
+              {%- if chosen == -1 and lev <= s1 -%}{%- assign chosen = forloop.index0 -%}{%- endif -%}
             {%- endfor -%}
-            {%- assign need = lane | plus: 1 -%}
-            {%- if need > lanes -%}{%- assign lanes = need -%}{%- endif -%}
+            {%- if chosen == -1 -%}
+              {%- assign chosen = LE.size -%}
+              {%- assign lane_ends = lane_ends | append: e1 | append: "," -%}
+            {%- else -%}
+              {%- assign nl = "" -%}
+              {%- for le in LE -%}
+                {%- if forloop.index0 == chosen -%}
+                  {%- assign nl = nl | append: e1 | append: "," -%}
+                {%- else -%}
+                  {%- assign nl = nl | append: le | append: "," -%}
+                {%- endif -%}
+              {%- endfor -%}
+              {%- assign lane_ends = nl -%}
+            {%- endif -%}
+
+            {%- assign used = chosen | plus: 1 -%}
+            {%- if used > cluster_lanes -%}{%- assign cluster_lanes = used -%}{%- endif -%}
+            {%- if e1 > cluster_max_end -%}{%- assign cluster_max_end = e1 -%}{%- endif -%}
+            {%- assign recs = recs | append: idx | append: ":" | append: chosen | append: ":" | append: cluster_id | append: "," -%}
           {%- endfor -%}
-          {%- assign lane_w = 100 | divided_by: lanes -%}
+          {%- if started -%}
+            {%- assign clusters = clusters | append: cluster_id | append: ":" | append: cluster_lanes | append: "," -%}
+          {%- endif -%}
+          {%- assign RECS = recs | split: "," -%}
+          {%- assign CLUS = clusters | split: "," -%}
 
           <div class="cg-col{% if weekend and SHADE_WEEKENDS %} bg--gray-10{% endif %}" data-grid-col="{{ day_key }}">
-            {%- comment -%} Pass 2: place the blocks. {%- endcomment -%}
+            {%- comment -%} Pass 2 — place the blocks from the sweep's lanes. {%- endcomment -%}
             {%- for ev in events -%}
               {%- if ev.all_day -%}{%- continue -%}{%- endif -%}
               {%- assign ev_day = ev.start_full | split: "T" | first -%}
               {%- unless ev_day == day_key -%}{%- continue -%}{%- endunless -%}
-              {%- assign me = forloop.index0 -%}
+              {%- assign idx = forloop.index0 -%}
               {%- assign tb = ev.start_full | split: "T" | last | split: ":" -%}
               {%- assign s1 = tb[0] | times: 60 | plus: tb[1] -%}
               {%- assign te = ev.end_full | split: "T" | last | split: ":" -%}
@@ -262,18 +332,24 @@
               {%- if hgt < MIN_BLOCK_H -%}{%- assign hgt = MIN_BLOCK_H -%}{%- endif -%}
 
               {%- assign lane = 0 -%}
-              {%- for f in events -%}
-                {%- if forloop.index0 >= me -%}{%- break -%}{%- endif -%}
-                {%- if f.all_day -%}{%- continue -%}{%- endif -%}
-                {%- assign f_day = f.start_full | split: "T" | first -%}
-                {%- unless f_day == day_key -%}{%- continue -%}{%- endunless -%}
-                {%- assign fs = f.start_full | split: "T" | last | split: ":" -%}
-                {%- assign s2 = fs[0] | times: 60 | plus: fs[1] -%}
-                {%- assign fe = f.end_full | split: "T" | last | split: ":" -%}
-                {%- if f.end_full == blank -%}{%- assign e2 = s2 | plus: 60 -%}{%- else -%}{%- assign e2 = fe[0] | times: 60 | plus: fe[1] -%}{%- endif -%}
-                {%- if e2 <= s2 -%}{%- assign e2 = s2 | plus: 30 -%}{%- endif -%}
-                {%- if s2 < e1 and e2 > s1 -%}{%- assign lane = lane | plus: 1 -%}{%- endif -%}
+              {%- assign myclus = 0 -%}
+              {%- for r in RECS -%}
+                {%- assign rp = r | split: ":" -%}
+                {%- assign ri = rp[0] | times: 1 -%}
+                {%- if ri == idx -%}
+                  {%- assign lane = rp[1] | times: 1 -%}
+                  {%- assign myclus = rp[2] | times: 1 -%}
+                  {%- break -%}
+                {%- endif -%}
               {%- endfor -%}
+              {%- assign lanes = 1 -%}
+              {%- for cpair in CLUS -%}
+                {%- assign cp = cpair | split: ":" -%}
+                {%- assign cid = cp[0] | times: 1 -%}
+                {%- if cid == myclus -%}{%- assign lanes = cp[1] | times: 1 -%}{%- break -%}{%- endif -%}
+              {%- endfor -%}
+              {%- if lanes < 1 -%}{%- assign lanes = 1 -%}{%- endif -%}
+              {%- assign lane_w = 100 | divided_by: lanes -%}
               {%- assign lane_l = lane | times: lane_w -%}
 
               {%- assign ci = 0 -%}
@@ -284,9 +360,11 @@
               <div class="cg-block px--1" style="top:{{ top }}px;height:{{ hgt }}px;left:{{ lane_l }}%;width:{{ lane_w }}%" data-event-block="true">
                 <div class="cg-bar bg--{{ token }}"></div>
                 <div class="cg-body bg--white px--1">
-                  <span class="label label--xsmall cg-line"><span class="text--{{ token }}">{{ GLYPHS[gi] }}</span> {{ ev.summary }}</span>
-                  {%- if hgt >= TIME_BLOCK_H -%}
+                  {%- if hgt >= TWO_LINE_H -%}
+                    <span class="label label--xsmall cg-line"><span class="text--{{ token }}">{{ GLYPHS[gi] }}</span> {{ ev.summary }}</span>
                     <span class="label label--xsmall text--gray-45 cg-line">{{ ev.start }}</span>
+                  {%- else -%}
+                    <span class="label label--xsmall cg-line"><span class="text--{{ token }}">{{ GLYPHS[gi] }}</span> {{ ev.start }} {{ ev.summary }}</span>
                   {%- endif -%}
                 </div>
               </div>

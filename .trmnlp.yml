@@ -83,6 +83,38 @@ variables:
         end: 11:30 AM
         start_full: '2026-09-08T10:00:00-05:00'
         end_full: '2026-09-08T11:30:00-05:00'
+      - summary: Long busy block
+        description: ''
+        calname: work@google.com
+        all_day: false
+        start: 7:30 AM
+        end: 4:30 PM
+        start_full: '2026-09-08T07:30:00-05:00'
+        end_full: '2026-09-08T16:30:00-05:00'
+      - summary: Stack A
+        description: ''
+        calname: you@gmail.com
+        all_day: false
+        start: 9:00 AM
+        end: 11:00 AM
+        start_full: '2026-09-08T09:00:00-05:00'
+        end_full: '2026-09-08T11:00:00-05:00'
+      - summary: Stack B
+        description: ''
+        calname: you@gmail.com
+        all_day: false
+        start: 12:00 PM
+        end: 2:00 PM
+        start_full: '2026-09-08T12:00:00-05:00'
+        end_full: '2026-09-08T14:00:00-05:00'
+      - summary: Late solo
+        description: ''
+        calname: you@gmail.com
+        all_day: false
+        start: 6:00 PM
+        end: 7:00 PM
+        start_full: '2026-09-08T18:00:00-05:00'
+        end_full: '2026-09-08T19:00:00-05:00'
       - summary: Dinner with Sam
         description: ''
         calname: you@gmail.com
