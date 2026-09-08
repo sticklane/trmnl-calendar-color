@@ -1,0 +1,36 @@
+# The native Google Calendar instance's settings, captured
+# 2026-09-07 from the form on the instance's edit page. Calendar ids are
+# placeholders here - the real ones live only in the pasted markup.
+# These are the settings the reference render was produced from; the
+# knob block of each src/*.liquid mirrors them.
+plugin_id: 8            # google_calendar
+refresh_interval: 15
+settings:
+  calendar:
+    - work@example.com
+    - shared@group.calendar.google.com   # the shared calendar
+    - you@gmail.com
+  event_layout: three_day_week
+  time_format: am/pm
+  date_format: short
+  time_zone: America/Chicago
+  include_event_time: yes
+  include_description: yes
+  include_past_events: no
+  colorize_events: yes          # "Whether to show calendar colors on event blocks"
+  month_header: no
+  fixed_week: yes
+  first_day: monday
+  rolling_advancement: week
+  scroll_time: '05:00'
+  scroll_time_end: '23:00'
+  event_status_filter: all
+  quadrant_columns: 2
+  zoom_mode: no
+  show_week_numbers: no
+  show_now_indicator: no
+  now_indicator_layer: behind_events
+  now_indicator_span: current_day
+  highlight_today: yes
+  shade_weekends: yes
+  vertical_alignment: center

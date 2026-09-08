@@ -1,2 +1,5 @@
 # trmnlp build output
 _build/
+
+# Reference renders carry real event titles off the linked calendars.
+reference/**/*.png
