@@ -31,11 +31,11 @@ SHARED = """{%- assign src = google_calendar_12345 -%}
 """
 
 LAYOUTS = {
-    # view              days panel axis budget hmax every one_line title legend maxblock
-    'full':            (3, 800, 41, 376, 24, 1, 31, 30, 'true', 38),
-    'half_horizontal': (3, 800, 38, 160, 16, 3, 31, 30, 'true', 26),
-    'half_vertical':   (2, 400, 40, 376, 22, 2, 22, 21, 'false', 38),
-    'quadrant':        (2, 400, 34, 152, 15, 3, 22, 21, 'false', 26),
+    # view              days panelW axis panelH head titlebar hmax every one_line title legend maxblock
+    'full':            (3, 800, 41, 480, 24, 44, 24, 1, 31, 30, 'true', 38),
+    'half_horizontal': (3, 800, 38, 240, 20, 36, 16, 3, 31, 30, 'true', 26),
+    'half_vertical':   (2, 400, 40, 480, 24, 44, 22, 2, 22, 21, 'false', 38),
+    'quadrant':        (2, 400, 34, 240, 20, 36, 15, 3, 22, 21, 'false', 26),
 }
 
 HEAD = """{%- comment -%}
@@ -75,7 +75,9 @@ KNOBS = """{%- comment -%} ---- this layout ---- {%- endcomment -%}
 {%- assign NUM_DAYS = @DAYS@ -%}          {%- comment -%} day columns, starting today {%- endcomment -%}
 {%- assign PANEL_W = @PANEL@ -%}         {%- comment -%} panel width; the columns divide it into whole px {%- endcomment -%}
 {%- assign AXIS_W = @AXIS@ -%}           {%- comment -%} chosen so (PANEL_W - AXIS_W) / NUM_DAYS is exact {%- endcomment -%}
-{%- assign GRID_BUDGET_H = @BUDGET@ -%}   {%- comment -%} px the grid may occupy: panel less headers, all-day band, title bar {%- endcomment -%}
+{%- assign PANEL_H = @PANELH@ -%}        {%- comment -%} panel height; the grid gets what the chrome leaves {%- endcomment -%}
+{%- assign HEAD_H = @HEADH@ -%}          {%- comment -%} day-header row {%- endcomment -%}
+{%- assign TITLE_H = @TITLEH@ -%}         {%- comment -%} framework title bar {%- endcomment -%}
 {%- assign HOUR_H_MAX = @HMAX@ -%}         {%- comment -%} px per hour ceiling {%- endcomment -%}
 {%- assign HOUR_EVERY = @EVERY@ -%}         {%- comment -%} label every Nth hour {%- endcomment -%}
 {%- assign ONE_LINE_CHARS = @ONELINE@ -%}   {%- comment -%} "start - end  Title" that fits the column on one line {%- endcomment -%}
@@ -87,9 +89,11 @@ KNOBS = """{%- comment -%} ---- this layout ---- {%- endcomment -%}
 """
 
 def render(view):
-    days, panel, axis, budget, hmax, every, one_line, title, legend, maxblock = LAYOUTS[view]
+    (days, panel, axis, panel_h, head_h, title_h, hmax, every,
+     one_line, title, legend, maxblock) = LAYOUTS[view]
     subs = {'@VIEW@': view, '@DAYS@': days, '@PANEL@': panel, '@AXIS@': axis,
-            '@BUDGET@': budget, '@HMAX@': hmax, '@EVERY@': every,
+            '@PANELH@': panel_h, '@HEADH@': head_h, '@TITLEH@': title_h,
+            '@HMAX@': hmax, '@EVERY@': every,
             '@ONELINE@': one_line, '@TITLE@': title, '@LEGEND@': legend,
             '@MAXBLOCK@': maxblock}
     out = HEAD + SHARED + '\n' + KNOBS + BODY

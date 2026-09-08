@@ -70,18 +70,13 @@ for layout in full half_horizontal half_vertical quadrant; do
     # Whole-pixel columns: the axis must divide the panel exactly.
     grep -qE -- '--cg-col-w:[0-9]+px' "$out" || { echo "FAIL: $out has no whole-pixel column width"; exit 1; }
 
-    # The grid must fit the panel. TRMNL centres an overflowing view, so
-    # a grid taller than its budget loses the day-header row off the top
-    # rather than clipping at the bottom the way the native render does.
-    case "$layout" in
-        full)            budget=376 ;;
-        half_horizontal) budget=160 ;;
-        half_vertical)   budget=376 ;;
-        quadrant)        budget=152 ;;
-    esac
-    gh=$(grep -o 'data-grid-h="[0-9]*"' "$out" | head -1 | grep -o '[0-9]*')
-    [ -n "$gh" ] || { echo "FAIL: $out does not report its grid height"; exit 1; }
-    [ "$gh" -le "$budget" ] || { echo "FAIL: $out grid is ${gh}px, budget ${budget}px - the header row will be clipped"; exit 1; }
+    # Headers + all-day band + grid + title bar must fit the panel. TRMNL
+    # centres an overflowing view, so anything over budget loses the day
+    # headers off the TOP rather than clipping at the bottom.
+    panel=$(grep -o 'data-panel-h="[0-9]*"' "$out" | head -1 | grep -o '[0-9]*')
+    total=$(grep -o 'data-total-h="[0-9]*"' "$out" | head -1 | grep -o '[0-9]*')
+    [ -n "$panel" ] && [ -n "$total" ] || { echo "FAIL: $out does not report its height budget"; exit 1; }
+    [ "$total" -le "$panel" ] || { echo "FAIL: $out wants ${total}px of a ${panel}px panel - the header row will be clipped"; exit 1; }
 
     # The window is today..today+N; anything outside it must not render.
     if grep -q 'should not render' "$out"; then
