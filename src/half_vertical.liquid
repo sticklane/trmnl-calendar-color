@@ -144,13 +144,18 @@
 <style>
   /* Framework utility classes carry padding, text alignment and fills so
      this block stays clear of the properties trmnlp's lint counts. */
-  .cg-wrap { display: flex; flex-direction: column; width: 100%; }
+  /* Pinned to the top of the view: TRMNL centres an overflowing child,
+     which would clip the day headers instead of the late hours. */
+  .cg-wrap { display: flex; flex-direction: column; width: 100%; align-self: flex-start; }
   .cg-row { display: flex; }
   .cg-row--head { align-items: flex-end; }
   .cg-axis { flex: 0 0 var(--cg-axis-w); width: var(--cg-axis-w); }
   .cg-day { flex: 1 1 0; min-width: 0; }
-  .cg-allday { border-bottom: 1px solid currentColor; align-items: stretch; }
-  .cg-allday .cg-day { border-left: 1px solid currentColor; }
+  /* border-block, not two border-* properties: the native render rules
+     off the all-day band top and bottom, and trmnlp's lint counts
+     declarations in this style block against a budget. */
+  .cg-allday { border-block: 1px dashed currentColor; align-items: stretch; }
+  .cg-allday .cg-day { border-left: 1px dotted currentColor; }
   .cg-axis--label { display: flex; align-items: center; }
   /* The grid may be taller than the panel; clip at the bottom the way
      the native render does rather than shrink the text. */
@@ -164,11 +169,18 @@
     flex: 0 0 var(--cg-hour-h); height: var(--cg-hour-h);
     line-height: 1; white-space: nowrap; overflow: visible;
   }
+  /* Two background layers make a DOTTED hour rule, the way the native
+     render draws it: the lower layer is a solid hairline repeated at the
+     hour pitch, the upper one paints white 2px verticals over the whole
+     column and so chops that hairline into dots. A single gradient
+     cannot dot a line, and one element per hour would be dozens of
+     inline styles that the linter counts against the template. */
   .cg-col {
     flex: 1 1 0; min-width: 0; position: relative;
-    border-left: 1px solid currentColor;
-    background-image: repeating-linear-gradient(
-      to bottom, #999 0, #999 1px, transparent 1px, transparent var(--cg-hour-h));
+    border-left: 1px dotted currentColor;
+    background-image:
+      repeating-linear-gradient(to right, #fff 0, #fff 2px, transparent 2px, transparent 4px),
+      repeating-linear-gradient(to bottom, #666 0, #666 1px, transparent 1px, transparent var(--cg-hour-h));
   }
   /* A solid filled block spanning the event's duration, text inside.
      Later blocks in a cluster cascade right and paint OVER earlier ones
@@ -212,7 +224,7 @@
       {%- if SHOW_ALLDAY -%}
         <div class="cg-row cg-allday">
           <div class="cg-axis cg-axis--label">
-            <span class="label label--xsmall text--gray-45">all day</span>
+            <span class="label label--xsmall text--gray-45">all-day</span>
           </div>
           {%- for n in (1..NUM_DAYS) -%}
             {%- assign offset = n | minus: 1 | times: 86400 -%}
