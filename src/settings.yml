@@ -1,0 +1,18 @@
+#
+# On usetrmnl.com this plugin runs with strategy "Plugin Merge", which
+# trmnlp models no strategy for. "polling" with an empty URL is the inert
+# local stand-in: it polls nothing, so the preview renders entirely from
+# the `variables:` fixture in .trmnlp.yml. Publish by pasting src/*.liquid
+# into the site's markup tabs — see README. Do not `trmnlp push` this file:
+# it would create a polling plugin, not a Plugin Merge one.
+#
+---
+strategy: polling
+polling_verb: get
+polling_url: ''
+no_screen_padding: 'no'
+dark_mode: 'no'
+framework_version: latest
+name: Calendar Color
+description: Calendar events by source color
+refresh_interval: 900

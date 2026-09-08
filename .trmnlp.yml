@@ -1,0 +1,78 @@
+# trmnlp local preview configuration.
+#
+# On usetrmnl.com this plugin uses strategy "Plugin Merge" and reads a
+# merge variable named after a native Google Calendar plugin instance
+# (google_calendar_<id>). trmnlp has no Plugin Merge strategy, so the
+# fixture below stands in for that merge variable: `variables:` is
+# deep-merged into the top-level Liquid scope, which is exactly where a
+# merge variable lands on the server.
+#
+# The node name here must match the `assign src = ...` line at the top of
+# each src/*.liquid file.
+---
+watch:
+  - .trmnlp.yml
+  - src
+
+time_zone: America/Chicago
+
+custom_fields: {}
+
+variables:
+  google_calendar_12345:
+    instance_name: Calendar
+    today_in_tz: '2026-09-07'
+    calendar_names:
+      you@gmail.com: Personal
+      work@google.com: Work
+      abc123@group.calendar.google.com: Family
+    events:
+      - summary: Standup
+        description: Daily sync
+        calname: work@google.com
+        all_day: false
+        start: 9:00am
+        end: 9:15am
+        start_full: '2026-09-07T09:00:00-05:00'
+      - summary: Dentist
+        description: Cleaning, 2nd floor
+        calname: you@gmail.com
+        all_day: false
+        start: 11:30am
+        end: 12:30pm
+        start_full: '2026-09-07T11:30:00-05:00'
+      - summary: Soccer practice
+        description: ''
+        calname: abc123@group.calendar.google.com
+        all_day: false
+        start: 4:00pm
+        end: 5:30pm
+        start_full: '2026-09-07T16:00:00-05:00'
+      - summary: Trash day
+        description: ''
+        calname: abc123@group.calendar.google.com
+        all_day: true
+        start: ''
+        end: ''
+        start_full: '2026-09-08'
+      - summary: Quarterly planning review
+        description: Bring the roadmap deck
+        calname: work@google.com
+        all_day: false
+        start: 10:00am
+        end: 11:30am
+        start_full: '2026-09-08T10:00:00-05:00'
+      - summary: Dinner with Sam
+        description: ''
+        calname: you@gmail.com
+        all_day: false
+        start: 7:00pm
+        end: 9:00pm
+        start_full: '2026-09-09T19:00:00-05:00'
+      - summary: Unlisted calendar event
+        description: Exercises the FALLBACK token cycle
+        calname: other@example.com
+        all_day: false
+        start: 2:00pm
+        end: 3:00pm
+        start_full: '2026-09-10T14:00:00-05:00'
