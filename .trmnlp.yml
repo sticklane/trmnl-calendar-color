@@ -16,7 +16,15 @@ watch:
 
 time_zone: America/Chicago
 
-custom_fields: {}
+# Stands in for the plugin's custom fields on the site. Production reads
+# the same keynames, so the fixture exercises the real code path: the
+# markup's built-in CAL_MAP_DEFAULT is only the empty-field fallback.
+custom_fields:
+  cal_map: |
+    you@gmail.com=black
+    work@example.com=red
+    shared@group.calendar.google.com=yellow
+  default_color: white
 
 variables:
   google_calendar_12345:
@@ -24,12 +32,12 @@ variables:
     today_in_tz: '2026-09-07T00:00:00.000-05:00'
     calendar_names:
       you@gmail.com: Personal
-      work@google.com: Work
-      abc123@group.calendar.google.com: Family
+      work@example.com: Work
+      shared@group.calendar.google.com: Family
     events:
       - summary: Cousin Pam's
         description: ''
-        calname: abc123@group.calendar.google.com
+        calname: shared@group.calendar.google.com
         all_day: true
         start: ''
         end: ''
@@ -37,7 +45,7 @@ variables:
         end_full: '2026-09-10'
       - summary: Trash day
         description: ''
-        calname: abc123@group.calendar.google.com
+        calname: shared@group.calendar.google.com
         all_day: true
         start: ''
         end: ''
@@ -45,7 +53,7 @@ variables:
         end_full: '2026-09-09'
       - summary: Standup
         description: Daily sync
-        calname: work@google.com
+        calname: work@example.com
         all_day: false
         start: 9:00 AM
         end: 9:15 AM
@@ -53,7 +61,7 @@ variables:
         end_full: '2026-09-07T09:15:00-05:00'
       - summary: Overlapping call
         description: ''
-        calname: work@google.com
+        calname: work@example.com
         all_day: false
         start: 9:00 AM
         end: 10:00 AM
@@ -61,7 +69,7 @@ variables:
         end_full: '2026-09-07T10:00:00-05:00'
       - summary: Back to back one
         description: ''
-        calname: work@google.com
+        calname: work@example.com
         all_day: false
         start: 10:00 AM
         end: 10:15 AM
@@ -69,7 +77,7 @@ variables:
         end_full: '2026-09-09T10:15:00-05:00'
       - summary: Back to back two
         description: ''
-        calname: work@google.com
+        calname: work@example.com
         all_day: false
         start: 10:15 AM
         end: 10:30 AM
@@ -77,7 +85,7 @@ variables:
         end_full: '2026-09-09T10:30:00-05:00'
       - summary: Back to back three
         description: ''
-        calname: work@google.com
+        calname: work@example.com
         all_day: false
         start: 10:30 AM
         end: 10:45 AM
@@ -93,7 +101,7 @@ variables:
         end_full: '2026-09-07T12:30:00-05:00'
       - summary: Soccer practice
         description: ''
-        calname: abc123@group.calendar.google.com
+        calname: shared@group.calendar.google.com
         all_day: false
         start: 4:00 PM
         end: 5:30 PM
@@ -101,7 +109,7 @@ variables:
         end_full: '2026-09-07T17:30:00-05:00'
       - summary: Quarterly planning review
         description: Bring the roadmap deck
-        calname: work@google.com
+        calname: work@example.com
         all_day: false
         start: 10:00 AM
         end: 11:30 AM
@@ -109,7 +117,7 @@ variables:
         end_full: '2026-09-08T11:30:00-05:00'
       - summary: Long busy block
         description: ''
-        calname: work@google.com
+        calname: work@example.com
         all_day: false
         start: 7:30 AM
         end: 4:30 PM
@@ -155,6 +163,46 @@ variables:
         end: 3:00 PM
         start_full: '2026-09-09T14:00:00-05:00'
         end_full: '2026-09-09T15:00:00-05:00'
+      - summary: Five minute check-in
+        description: ''
+        calname: work@example.com
+        all_day: false
+        start: 8:00 AM
+        end: 8:05 AM
+        start_full: '2026-09-09T08:00:00-05:00'
+        end_full: '2026-09-09T08:05:00-05:00'
+      - summary: Afternoon deep work
+        description: Four hours under a stack of short ones
+        calname: you@gmail.com
+        all_day: false
+        start: 1:00 PM
+        end: 5:00 PM
+        start_full: '2026-09-09T13:00:00-05:00'
+        end_full: '2026-09-09T17:00:00-05:00'
+      - summary: Stack short one
+        description: ''
+        calname: work@example.com
+        all_day: false
+        start: 1:00 PM
+        end: 1:10 PM
+        start_full: '2026-09-09T13:00:00-05:00'
+        end_full: '2026-09-09T13:10:00-05:00'
+      - summary: Stack short two
+        description: ''
+        calname: work@example.com
+        all_day: false
+        start: 1:10 PM
+        end: 1:20 PM
+        start_full: '2026-09-09T13:10:00-05:00'
+        end_full: '2026-09-09T13:20:00-05:00'
+      - summary: Stack short three
+        description: ''
+        calname: shared@group.calendar.google.com
+        all_day: false
+        start: 1:20 PM
+        end: 1:30 PM
+        start_full: '2026-09-09T13:20:00-05:00'
+        end_full: '2026-09-09T13:30:00-05:00'
       - summary: PAST should not render
         description: ''
         calname: you@gmail.com

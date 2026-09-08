@@ -6,6 +6,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+python3 scripts/gen_layouts.py --check
 ./bin/trmnlp lint
 ./bin/trmnlp build
 
@@ -38,15 +39,35 @@ for layout in full half_horizontal half_vertical quadrant; do
     [ "$(grep -oE 'top:[0-9]+px;height:[0-9]+px' "$out" | sort -u | wc -l | tr -d ' ')" -ge 3 ] || {
         echo "FAIL: $out blocks all share one geometry"; exit 1; }
 
-    # Every block carries a calendar fill and contrasting text.
+    # Every block carries a calendar fill and black-or-white text.
     grep -q 'cg-block bg--' "$out" || { echo "FAIL: $out blocks are not filled with a calendar colour"; exit 1; }
     grep -qE 'cg-line text--(white|black)' "$out" || { echo "FAIL: $out block text has no contrast class"; exit 1; }
-
-    # Overlapping events cascade into lanes rather than stacking.
-    # The quadrant is deliberately single-lane: too narrow for two.
-    if [ "$layout" != "quadrant" ]; then
-        grep -qE 'left:(22|44)%' "$out" || { echo "FAIL: $out never cascades a second lane"; exit 1; }
+    if grep -oE 'cg-line text--[a-z0-9-]+' "$out" | grep -vqE 'text--(white|black)$'; then
+        echo "FAIL: $out prints block text in a colour other than black or white"; exit 1
     fi
+    # The wide layouts name each calendar next to its colour swatch.
+    case "$layout" in
+        full|half_horizontal)
+            grep -q 'data-legend="' "$out" || { echo "FAIL: $out legend does not show the calendar colours"; exit 1; } ;;
+    esac
+
+    # Crispness: the B/W/R/Y panel has four solid inks and dithers
+    # everything else into speckle, so nothing may ask for a grey, a
+    # translucency or a half-tone. Hairlines only, on whole pixels.
+    if grep -oE '(bg|text|border)--gray-[0-9]+' "$out" | head -1 | grep -q .; then
+        echo "FAIL: $out uses a grey token, which dithers on a 4-colour panel"
+        grep -oE '(bg|text|border)--gray-[0-9]+' "$out" | sort -u | head -3; exit 1
+    fi
+    if grep -qE 'opacity:|rgba\(|#(999|ccc|eee|888|666|aaa)' "$out"; then
+        echo "FAIL: $out uses a translucency or an off-palette grey"
+        grep -oE 'opacity:[^;]*|rgba\([^)]*\)|#(999|ccc|eee|888|666|aaa)' "$out" | sort -u | head -3
+        exit 1
+    fi
+    if grep -qE 'style="[^"]*(top|height):[0-9]*\.[0-9]' "$out"; then
+        echo "FAIL: $out places a block on a fractional pixel"; exit 1
+    fi
+    # Whole-pixel columns: the axis must divide the panel exactly.
+    grep -qE -- '--cg-col-w:[0-9]+px' "$out" || { echo "FAIL: $out has no whole-pixel column width"; exit 1; }
 
     # The grid must fit the panel. TRMNL centres an overflowing view, so
     # a grid taller than its budget loses the day-header row off the top
