@@ -22,6 +22,10 @@ for layout in full half_horizontal half_vertical quadrant; do
     # variable, so the day-key comparison has to normalize it. Without
     # that, the Today highlight silently never fires.
     grep -q 'Today ·' "$out" || { echo "FAIL: $out rendered no Today header"; exit 1; }
+    # The live merge variable does NOT hand back a sorted array, despite
+    # the README's assumption, so each day must still appear exactly once.
+    dupes=$(grep -o 'data-group-header="true">[^<]*' "$out" | sort | uniq -d)
+    [ -z "$dupes" ] || { echo "FAIL: $out repeats a day header: $dupes"; exit 1; }
 done
 
 echo "OK: lint clean, 4 layouts rendered from the .trmnlp.yml fixture"

@@ -37,7 +37,7 @@
 {%- assign TITLE_SIZE = "small" -%}
 
 {%- comment -%} ---- derived: resolve one token + glyph per calendar, once ---- {%- endcomment -%}
-{%- assign events = src.events -%}
+{%- assign events = src.events | sort: "start_full" -%}
 {%- assign names = src.calendar_names -%}
 {%- assign today = src.today_in_tz | split: "T" | first -%}
 {%- assign cals = events | map: "calname" | uniq -%}

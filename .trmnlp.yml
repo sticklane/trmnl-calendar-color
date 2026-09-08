@@ -27,6 +27,13 @@ variables:
       work@google.com: Work
       abc123@group.calendar.google.com: Family
     events:
+      - summary: Trash day
+        description: ''
+        calname: abc123@group.calendar.google.com
+        all_day: true
+        start: ''
+        end: ''
+        start_full: '2026-09-08'
       - summary: Standup
         description: Daily sync
         calname: work@google.com
@@ -48,13 +55,6 @@ variables:
         start: 4:00pm
         end: 5:30pm
         start_full: '2026-09-07T16:00:00-05:00'
-      - summary: Trash day
-        description: ''
-        calname: abc123@group.calendar.google.com
-        all_day: true
-        start: ''
-        end: ''
-        start_full: '2026-09-08'
       - summary: Quarterly planning review
         description: Bring the roadmap deck
         calname: work@google.com
