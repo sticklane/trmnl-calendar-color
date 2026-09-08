@@ -65,6 +65,19 @@ width, and a title is shortened only when the title alone exceeds
 type. There are no lanes: two lanes in a 253px column left 197px, which
 is where truncated titles came from.
 
+**Text.** The title leads: `Title  h:mm-h:mm` on one line when it fits,
+otherwise the title on line one and the times on line two. When the
+column has room for one more line but not two the TIMES are dropped - the
+title is shortened only when the title alone is wider than the column.
+
+The face is `label--small`, which is the framework's 12px pixel-hinted
+bitmap (TRMNL12, 12px line height, 6.65px per character, measured in the
+live preview). `label--xsmall` is an ALIAS of the 16px face (TRMNL16,
+8.5px per character), not a smaller size; nothing below 12px exists.
+At its native pixel size the face needs no scaling, so no glyph is
+anti-aliased. `ONE_LINE_CHARS` and `TITLE_CHARS` are derived from that
+6.65px measurement and the column width.
+
 **Crispness.** The panel dithers anything that is not one of its four
 inks, and a dither reads as fuzz. So: no grey tokens, no opacity, no
 half-tone fill anywhere (a weekend is a heavier column rule, never a

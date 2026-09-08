@@ -95,8 +95,13 @@ mapping is visible on the panel itself.
 
 `scripts/gen_layouts.py` holds the table: `NUM_DAYS`, `PANEL_W`,
 `AXIS_W`, `GRID_BUDGET_H`, `HOUR_H_MAX`, `HOUR_EVERY`, `ONE_LINE_CHARS`,
-`TITLE_CHARS`, `MAX_BLOCK_H`, `SHOW_LEGEND`. Edit that table or
-`scripts/layout_body.liquid`, then run the script.
+`TITLE_CHARS`, `MAX_BLOCK_H`, `SHOW_LEGEND`, plus `PANEL_H`, `HEAD_H`
+and `TITLE_H`, which the grid's height budget is derived from. Edit that
+table or `scripts/layout_body.liquid`, then run the script.
+
+`ONE_LINE_CHARS` and `TITLE_CHARS` come from one measurement: the
+framework's `label--small` face is TRMNL12, 6.65px per character. Change
+the face and both numbers move.
 
 ## Gotchas
 
