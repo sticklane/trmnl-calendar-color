@@ -1,21 +1,25 @@
 {%- comment -%} ---------------- derived ---------------- {%- endcomment -%}
 
 {%- comment -%}
-  CAL_MAP comes from the plugin's custom field `cal_map` - one
-  `calendar-id=colour` per line, commas also accepted - and falls back to
-  the placeholders below when the field is empty. Unmapped calendars take
-  `default_color`. Colours are framework tokens; on the B/W/R/Y panel only
-  black, white, red and yellow are solid inks. Anything else dithers.
+  Colours come from the plugin's custom fields. On the server they arrive
+  as `trmnl.plugin_settings.custom_fields_values.<keyname>`; trmnlp has no
+  such object, so each read falls back to a bare top-level variable, which
+  is where the .trmnlp.yml fixture puts them, and then to the placeholders
+  in the knob block. `cal_map` is one `calendar-id=colour` per line, commas
+  also accepted; anything unlisted takes `default_color`. Colours are
+  framework tokens, and on the B/W/R/Y panel only black, white, red and
+  yellow are solid inks - everything else dithers into speckle.
 {%- endcomment -%}
-{%- assign CAL_MAP_RAW = cal_map | default: "" | strip -%}
+{%- assign CF = trmnl.plugin_settings.custom_fields_values -%}
+{%- assign CAL_MAP_RAW = CF.cal_map | default: cal_map | default: "" | strip -%}
 {%- if CAL_MAP_RAW == "" -%}{%- assign CAL_MAP_RAW = CAL_MAP_DEFAULT -%}{%- endif -%}
 {%- assign CAL_MAP_RAW = CAL_MAP_RAW | replace: ",", "
 " -%}
 {%- assign CAL_MAP = CAL_MAP_RAW | split: "
 " -%}
-{%- assign DEFAULT_COLOR = default_color | default: "" | strip -%}
+{%- assign DEFAULT_COLOR = CF.default_color | default: default_color | default: "" | strip -%}
 {%- if DEFAULT_COLOR == "" -%}{%- assign DEFAULT_COLOR = DEFAULT_COLOR_FALLBACK -%}{%- endif -%}
-{%- assign AXIS_MODE = axis_mode | default: "" | strip -%}
+{%- assign AXIS_MODE = CF.axis_mode | default: axis_mode | default: "" | strip -%}
 {%- if AXIS_MODE != "day" and AXIS_MODE != "fit" -%}{%- assign AXIS_MODE = AXIS_MODE_FALLBACK -%}{%- endif -%}
 
 {%- assign events = src.events | sort: "start_full" -%}
