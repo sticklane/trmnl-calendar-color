@@ -42,18 +42,32 @@
 {%- assign TITLE_CHARS = ONE_LINE_CHARS | minus: 1 -%}
 
 {%- comment -%} one fill token, and one contrasting text colour, per calendar {%- endcomment -%}
+{%- comment -%}
+  A map line is `id=token`, or `id=token Label` when the legend should
+  say something better than the address's local part.
+{%- endcomment -%}
 {%- assign tokens_s = "" -%}
+{%- assign labels_s = "" -%}
 {%- for c in cals -%}
   {%- assign t = "" -%}
+  {%- assign lab = "" -%}
   {%- for pair in CAL_MAP -%}
     {%- assign kv = pair | strip | split: "=" -%}
     {%- assign k = kv[0] | strip -%}
-    {%- if k == c -%}{%- assign t = kv[1] | strip -%}{%- break -%}{%- endif -%}
+    {%- if k == c -%}
+      {%- assign tl = kv[1] | strip | split: " " -%}
+      {%- assign t = tl[0] -%}
+      {%- if tl.size > 1 -%}{%- assign lab = kv[1] | strip | remove_first: t | strip -%}{%- endif -%}
+      {%- break -%}
+    {%- endif -%}
   {%- endfor -%}
   {%- if t == "" -%}{%- assign t = DEFAULT_COLOR -%}{%- endif -%}
+  {%- if lab == "" -%}{%- assign lab = names[c] | default: c | split: "@" | first -%}{%- endif -%}
   {%- assign tokens_s = tokens_s | append: t | append: "," -%}
+  {%- assign labels_s = labels_s | append: lab | append: "," -%}
 {%- endfor -%}
 {%- assign CAL_TOKENS = tokens_s | split: "," -%}
+{%- assign CAL_LABELS = labels_s | split: "," -%}
 
 {%- assign texts_s = "" -%}
 {%- for t in CAL_TOKENS -%}
@@ -131,6 +145,17 @@
     {%- assign GRID_START_H = sh -%}
     {%- assign GRID_END_H = eh -%}
   {%- endif -%}
+{%- endif -%}
+{%- comment -%}
+  The time of the render, as minutes into the local day, for the marker
+  across today's column. trmnl.system.timestamp_utc is the server clock
+  and trmnl.user.utc_offset the user's zone; without them there is no
+  marker.
+{%- endcomment -%}
+{%- assign NOW_MIN = -1 -%}
+{%- if trmnl.system.timestamp_utc -%}
+  {%- assign now_local = trmnl.system.timestamp_utc | plus: trmnl.user.utc_offset -%}
+  {%- assign NOW_MIN = now_local | modulo: 86400 | divided_by: 60 -%}
 {%- endif -%}
 {%- assign START_MIN = GRID_START_H | times: 60 -%}
 {%- assign END_MIN = GRID_END_H | times: 60 -%}
@@ -264,6 +289,15 @@
   .cg-block--tight { --cg-line-h: {{ TIGHT_LINE_H }}px; }
   .cg-block--tight .cg-line { font: bold {{ TIGHT_LINE_H }}px/{{ TIGHT_LINE_H }}px var(--label-small-font-family); }
   .cg-adbar { overflow: hidden; border: 1px solid #fff; }
+  .cg-adbar.cg-block--ink { border-color: #000; }
+  /* The render-time marker: a 2px ink rule across today's column, with a
+     white hairline either side so it also reads across a black block. */
+  .cg-now {
+    position: absolute; left: 0; right: 0; height: 4px;
+    border-block: 1px solid #fff; box-sizing: border-box;
+  }
+  /* Day headers in bold, like the block text they sit over. */
+  .cg-row--head .label { font-weight: bold; }
   .cg-swatch { display: inline-block; width: 8px; height: 8px; }
   .cg-legend { align-items: center; height: var(--cg-legend-h); }
   /* The window-end label, pulled back inside the grid by one line. */
@@ -319,7 +353,7 @@
                 {%- assign token = CAL_TOKENS[ci] -%}
                 {%- assign txt = CAL_TEXTS[ci] -%}
                 {%- assign ad_title = ev.summary | truncate: TITLE_CHARS -%}
-                <div class="cg-adbar bg--{{ token }}" data-allday="true" data-text="{{ ad_title | escape }}">
+                <div class="cg-adbar bg--{{ token }}{% if txt == "black" %} cg-block--ink{% endif %}" data-allday="true" data-text="{{ ad_title | escape }}">
                   <span class="label label--small cg-line text--{{ txt }}">{{ ad_title }}</span>
                 </div>
               {%- endfor -%}
@@ -522,6 +556,12 @@
               </div>
             {%- endfor -%}
 
+            {%- if day_key == today and NOW_MIN >= START_MIN and NOW_MIN < END_MIN -%}
+              {%- assign now_y = NOW_MIN | minus: START_MIN | times: GRID_H | divided_by: SPAN_MIN -%}
+              {%- assign bi = bi | plus: 1 -%}
+              {%- assign block_css = block_css | append: ".cg-b" | append: bi | append: "{top:" | append: now_y | append: "px}" -%}
+              <div class="cg-now bg--black cg-b{{ bi }}" data-now="{{ NOW_MIN }}"></div>
+            {%- endif -%}
             {%- if more > 0 -%}
               {%- assign more_top = GRID_H | minus: ONE_LINE_H -%}
               {%- assign bi = bi | plus: 1 -%}
@@ -539,7 +579,7 @@
         <div class="cg-row cg-legend px--1">
           {%- for c in cals -%}
             {%- assign token = CAL_TOKENS[forloop.index0] -%}
-            {%- assign label = names[c] | default: c | split: "@" | first -%}
+            {%- assign label = CAL_LABELS[forloop.index0] -%}
             <span class="cg-swatch bg--{{ token }}" data-legend="{{ token }}"></span>
             <span class="label label--small px--1">{{ label }}</span>
           {%- endfor -%}

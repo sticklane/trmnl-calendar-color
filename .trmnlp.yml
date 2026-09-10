@@ -24,7 +24,7 @@ custom_fields: {}
 # the separate `custom_fields:` block into the render scope.
 variables:
   cal_map: |
-    you@gmail.com=black
+    you@gmail.com=black Personal
     work@example.com=orange
     shared@group.calendar.google.com=pink
     corp@example.com=yellow-60

@@ -97,7 +97,8 @@ python3 scripts/geometry_check.py || exit 1
 # which align-self:flex-start on .cg-wrap guarantees.
 cp .trmnlp.yml "$fixture_backup"
 trap 'cp "$fixture_backup" .trmnlp.yml; rm -f "$fixture_backup"' EXIT
-sed -i '' 's/axis_mode: fit/axis_mode: day/' .trmnlp.yml
+# Written through the existing inode (see the days build below).
+sed 's/axis_mode: fit/axis_mode: day/' "$fixture_backup" > .trmnlp.yml
 ./bin/trmnlp build >/dev/null
 for layout in full half_horizontal half_vertical quadrant; do
     out="_build/${layout}.html"
