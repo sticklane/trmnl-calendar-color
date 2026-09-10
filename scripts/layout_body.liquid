@@ -64,6 +64,28 @@
 {%- assign CAL_TEXTS = texts_s | split: "," -%}
 
 {%- comment -%}
+  A quiet calendar is one whose events all carry the same summary, which
+  is what a corporate calendar looks like from outside ("Busy", "Busy",
+  "Busy"). The word says nothing the fill does not, so its blocks show
+  only their times. Two events or more are needed to call it quiet.
+{%- endcomment -%}
+{%- assign quiet_s = "" -%}
+{%- for c in cals -%}
+  {%- assign q = true -%}
+  {%- assign n = 0 -%}
+  {%- assign first_sum = nil -%}
+  {%- for ev in events -%}
+    {%- if ev.calname != c -%}{%- continue -%}{%- endif -%}
+    {%- assign n = n | plus: 1 -%}
+    {%- if first_sum == nil -%}{%- assign first_sum = ev.summary -%}
+    {%- elsif ev.summary != first_sum -%}{%- assign q = false -%}{%- break -%}{%- endif -%}
+  {%- endfor -%}
+  {%- if n < 2 -%}{%- assign q = false -%}{%- endif -%}
+  {%- assign quiet_s = quiet_s | append: q | append: "," -%}
+{%- endfor -%}
+{%- assign CAL_QUIET = quiet_s | split: "," -%}
+
+{%- comment -%}
   Axis range. `day` shows midnight to midnight. `fit` runs from the whole
   hour BEFORE the earliest timed event in view to the whole hour AFTER the
   latest one ends, each end rounded outward and clamped to the day
@@ -227,6 +249,10 @@
     position: absolute; box-sizing: border-box; overflow: hidden;
     border: 1px solid #fff; right: 0;
   }
+  /* A light fill gets an ink hairline so its edge is crisp against the
+     white column and against a sibling in the same pale tile; a dark fill
+     keeps the white one, which is what separates two nested black blocks. */
+  .cg-block--ink { border-color: #000; }
   /* --ui-scale:0 zeroes the 3px of vertical spacing the framework gives
      label--small, which a block sized to its line cannot spare. */
   .cg-line {
@@ -422,9 +448,25 @@
                 the width left after the indent.
               {%- endcomment -%}
               {%- assign lh = LINE_H -%}
-              {%- assign title = ev.summary | truncate: title_chars -%}
-              {%- assign times = ev.start | append: "-" | append: ev.end -%}
-              {%- assign one = title | append: "  " | append: times -%}
+              {%- assign ci = 0 -%}
+              {%- for c in cals -%}{%- if c == ev.calname -%}{%- assign ci = forloop.index0 -%}{%- break -%}{%- endif -%}{%- endfor -%}
+              {%- assign quiet = CAL_QUIET[ci] -%}
+              {%- if quiet == "true" -%}{%- assign title = "" -%}{%- else -%}{%- assign title = ev.summary | truncate: title_chars -%}{%- endif -%}
+              {%- comment -%}
+                Compact times: "9:00-10:30am", and the meridian on both ends
+                only when they differ, "11:30am-1:00pm". Google supplies
+                `start` and `end` already formatted as "h:mm AM".
+              {%- endcomment -%}
+              {%- assign sp = ev.start | split: " " -%}
+              {%- assign ep = ev.end | split: " " -%}
+              {%- assign s_ap = sp[1] | downcase -%}
+              {%- assign e_ap = ep[1] | downcase -%}
+              {%- if s_ap == e_ap -%}
+                {%- assign times = sp[0] | append: "-" | append: ep[0] | append: e_ap -%}
+              {%- else -%}
+                {%- assign times = sp[0] | append: s_ap | append: "-" | append: ep[0] | append: e_ap -%}
+              {%- endif -%}
+              {%- if title == "" -%}{%- assign one = times -%}{%- else -%}{%- assign one = title | append: "  " | append: times -%}{%- endif -%}
               {%- if one.size <= one_chars -%}{%- assign lines = 1 -%}{%- else -%}{%- assign lines = 2 -%}{%- endif -%}
               {%- assign text_h = lines | times: lh | plus: 2 -%}
               {%- comment -%}
@@ -442,8 +484,8 @@
                 {%- assign lost = indent | times: INDENT_W | times: 100 | plus: TIGHT_CHAR_W100 | minus: 1 | divided_by: TIGHT_CHAR_W100 -%}
                 {%- assign one_chars = ONE_LINE_CHARS | times: CHAR_W100 | divided_by: TIGHT_CHAR_W100 | minus: lost -%}
                 {%- assign title_chars = TITLE_CHARS | times: CHAR_W100 | divided_by: TIGHT_CHAR_W100 | minus: lost -%}
-                {%- assign title = ev.summary | truncate: title_chars -%}
-                {%- assign one = title | append: "  " | append: times -%}
+                {%- if quiet != "true" -%}{%- assign title = ev.summary | truncate: title_chars -%}{%- endif -%}
+                {%- if title == "" -%}{%- assign one = times -%}{%- else -%}{%- assign one = title | append: "  " | append: times -%}{%- endif -%}
                 {%- if one.size <= one_chars -%}{%- assign lines = 1 -%}{%- else -%}{%- assign lines = 2 -%}{%- endif -%}
                 {%- assign text_h = lines | times: lh | plus: 2 -%}
               {%- endif -%}
@@ -462,18 +504,18 @@
               {%- assign text_bottom = top | plus: text_h -%}
               {%- assign stack = stack | append: cbot | append: ":" | append: bottom | append: ":" | append: text_bottom | append: "," -%}
 
-              {%- assign ci = 0 -%}
-              {%- for c in cals -%}{%- if c == ev.calname -%}{%- assign ci = forloop.index0 -%}{%- break -%}{%- endif -%}{%- endfor -%}
               {%- assign token = CAL_TOKENS[ci] -%}
               {%- assign txt = CAL_TEXTS[ci] -%}
               {%- assign bi = bi | plus: 1 -%}
               {%- assign block_css = block_css | append: ".cg-b" | append: bi | append: "{top:" | append: top | append: "px;height:" | append: hgt | append: "px;left:" | append: left | append: "px}" -%}
-              <div class="cg-block cg-b{{ bi }} bg--{{ token }}{% if lh < LINE_H %} cg-block--tight{% endif %}" data-block="{{ top }},{{ hgt }},{{ left }},{{ lines }},{{ lh }}" data-clock="{{ ctop }},{{ cbot }}" data-tc="{{ title_chars }}" data-form="{{ form }}" data-times="{{ times }}" data-title="{{ title | escape }}">
+              <div class="cg-block cg-b{{ bi }} bg--{{ token }}{% if lh < LINE_H %} cg-block--tight{% endif %}{% if txt == "black" %} cg-block--ink{% endif %}" data-block="{{ top }},{{ hgt }},{{ left }},{{ lines }},{{ lh }}" data-clock="{{ ctop }},{{ cbot }}" data-tc="{{ title_chars }}" data-form="{{ form }}" data-times="{{ times }}" data-title="{{ title | escape }}">
                 {%- if form == 2 -%}
                   <span class="label label--small cg-line text--{{ txt }}">{{ title }}</span>
                   <span class="label label--small cg-line text--{{ txt }}">{{ times }}</span>
                 {%- elsif form == 3 -%}
                   <span class="label label--small cg-line text--{{ txt }}">{{ title }}</span>
+                {%- elsif title == "" -%}
+                  <span class="label label--small cg-line text--{{ txt }}">{{ times }}</span>
                 {%- else -%}
                   <span class="label label--small cg-line text--{{ txt }}">{{ title }}&nbsp;&nbsp;{{ times }}</span>
                 {%- endif -%}

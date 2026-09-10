@@ -65,6 +65,29 @@ EXPECTED_TITLES = {n: {truncate(ev['summary'], n): ev for ev in EVENTS}
                    for n in range(10, 160)}
 
 
+def compact(ev):
+    """The block's time string: one meridian when both ends share it."""
+    s, sap = ev['start'].split(' ')
+    e, eap = ev['end'].split(' ')
+    if sap == eap:
+        return f'{s}-{e}{eap.lower()}'
+    return f'{s}{sap.lower()}-{e}{eap.lower()}'
+
+
+# A quiet calendar: two or more events, all with the same summary. Its
+# blocks carry no title, only their times.
+def _quiet():
+    by_cal = {}
+    for ev in EVENTS:
+        by_cal.setdefault(ev['calname'], set()).add(ev['summary'])
+    counts = {}
+    for ev in EVENTS:
+        counts[ev['calname']] = counts.get(ev['calname'], 0) + 1
+    return {c for c, sums in by_cal.items() if len(sums) == 1 and counts[c] >= 2}
+
+QUIET = _quiet()
+
+
 for f in sorted((ROOT / '_build').glob('*.html')):
     h = f.read_text()
     name = f.name
@@ -158,8 +181,18 @@ for f in sorted((ROOT / '_build').glob('*.html')):
                 fail.append(f'{name} {day}: {title!r} claims {tc} chars, wider than the column ({max_tc})')
             if title.endswith('...') and len(title) != tc:
                 fail.append(f'{name} {day}: title {title!r} shortened below its {tc}-char width')
-            ev = EXPECTED_TITLES.get(tc, {}).get(title)
-            if ev is None:
+            if title == '':
+                ev = next((e for e in EVENTS if e['calname'] in QUIET and not e.get('all_day')
+                           and e['start_full'].startswith(day) and compact(e) == dtimes), None)
+                if ev is None:
+                    fail.append(f'{name} {day}: a block with no title at {dtimes} is not a quiet-calendar event')
+            else:
+                ev = EXPECTED_TITLES.get(tc, {}).get(title)
+                if ev is not None and ev['calname'] in QUIET:
+                    fail.append(f'{name} {day}: quiet calendar shows its summary {title!r}')
+                if dtimes != compact(ev) if ev else False:
+                    fail.append(f'{name} {day}: {title!r} shows times {dtimes!r}, want {compact(ev)!r}')
+            if ev is None and title != '':
                 fail.append(f'{name} {day}: title {title!r} is not any fixture event, in full')
             else:
                 drawn.add(ev['summary'])
