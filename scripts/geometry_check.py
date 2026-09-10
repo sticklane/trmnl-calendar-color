@@ -62,7 +62,7 @@ def truncate(s, n):
 
 # Every title the fixture could legitimately produce, per column width.
 EXPECTED_TITLES = {n: {truncate(ev['summary'], n): ev for ev in EVENTS}
-                   for n in range(10, 80)}
+                   for n in range(10, 160)}
 
 
 for f in sorted((ROOT / '_build').glob('*.html')):

@@ -55,3 +55,14 @@ custom_fields:
       - fit
       - day
     optional: true
+  - keyname: days
+    field_type: select
+    name: Days shown
+    description: >-
+      "auto" shows the layout's own span (3 days full-width, 2 in the
+      half-vertical and quadrant). "1" is single-day mode: today only,
+      one column across the whole width, same hour axis.
+    options:
+      - auto
+      - "1"
+    optional: true

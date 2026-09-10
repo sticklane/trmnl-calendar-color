@@ -21,6 +21,9 @@
 {%- if DEFAULT_COLOR == "" -%}{%- assign DEFAULT_COLOR = DEFAULT_COLOR_FALLBACK -%}{%- endif -%}
 {%- assign AXIS_MODE = CF.axis_mode | default: axis_mode | default: "" | strip -%}
 {%- if AXIS_MODE != "day" and AXIS_MODE != "fit" -%}{%- assign AXIS_MODE = AXIS_MODE_FALLBACK -%}{%- endif -%}
+{%- comment -%} `days` = 1 is the single-day mode: one column, the layout's full width, the same hour axis. {%- endcomment -%}
+{%- assign DAYS_CF = CF.days | default: days | default: "" | strip -%}
+{%- if DAYS_CF == "1" -%}{%- assign NUM_DAYS = 1 -%}{%- endif -%}
 
 {%- assign events = src.events | sort: "start_full" -%}
 {%- assign names = src.calendar_names -%}

@@ -15,8 +15,9 @@ SHARED = """{%- assign src = google_calendar_12345 -%}
 {%- assign CAL_MAP_DEFAULT = "you@gmail.com=black,work@example.com=red,shared@group.calendar.google.com=yellow" -%}
 {%- assign DEFAULT_COLOR_FALLBACK = "black" -%}
 {%- comment -%} fills that take BLACK text. On the B/W/R/Y panel orange is a red-and-yellow
-     tile and pink a red-and-white one; both are light enough for black and too light for white. {%- endcomment -%}
-{%- assign LIGHT_FILLS = "white,yellow,orange,pink,gray-10,gray-15,gray-20,gray-25,gray-30,gray-35" | split: "," -%}
+     tile and pink a red-and-white one. A -45..-75 step is the hue's dots on a white ground,
+     and yellow-10..-40 is yellow under a sparse black dot; all of those stay light. {%- endcomment -%}
+{%- assign LIGHT_FILLS = "white,yellow,orange,pink,yellow-10,yellow-15,yellow-20,yellow-25,yellow-30,yellow-35,yellow-40,yellow-45,yellow-50,yellow-55,yellow-60,yellow-65,yellow-70,yellow-75,orange-45,orange-50,orange-55,orange-60,orange-65,orange-70,orange-75,pink-45,pink-50,pink-55,pink-60,pink-65,pink-70,pink-75,red-45,red-50,red-55,red-60,red-65,red-70,red-75,gray-10,gray-15,gray-20,gray-25,gray-30,gray-35" | split: "," -%}
 
 {%- comment -%} ---- layout ---- {%- endcomment -%}
 {%- assign SHOW_ALLDAY = true -%}
@@ -48,8 +49,9 @@ HEAD = """{%- comment -%}
 =====================================================================
  Google Calendar fork - per-calendar colour coding (TRMNL Plugin Merge)
  Layout: @VIEW@
- View:   3 Day Week time grid. Hours down the left axis, one column per
-         day. Every event is a solid filled block carrying its start
+ View:   Week time grid. Hours down the left axis, one column per day
+         (the layout's span, or today only when "Days shown" is 1).
+         Every event is a solid filled block carrying its start
          time, end time and title in full. Blocks sit at their clock
          position; a block that starts inside another is indented and
          painted over it, as the native render does, but never over
@@ -70,8 +72,9 @@ HEAD = """{%- comment -%}
       only while those fields are empty.
 
  COLOURS. On the TRMNL OG (B/W/R/Y) panel only black, white, red and
- yellow are solid inks; every other token is dithered into a speckle and
- reads as fuzz. Grey steps are for 1-bit and TRMNL X panels only.
+ yellow are solid inks. orange (red+yellow tile), pink (red+white tile)
+ and the -45..-75 tints (the hue's dots on white) are usable blends;
+ grey steps are for 1-bit and TRMNL X panels only.
 =====================================================================
 {%- endcomment -%}
 

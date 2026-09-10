@@ -108,9 +108,25 @@ grep -q 'data-hour="0" data-hour-y="0">12am' _build/full.html || { echo "FAIL: d
 grep -qE 'data-hour="24" data-hour-y="[0-9]+">12am' _build/full.html || { echo "FAIL: day axis does not label midnight at its end"; exit 1; }
 python3 scripts/geometry_check.py || exit 1
 
+# Single-day mode: `days: 1` overrides the layout's day count, so every
+# layout draws exactly one column and it takes the whole usable width.
+# Written through the existing inode: a cp followed by sed -i replaces the
+# file twice and the Docker bind mount can miss the second one.
+sed 's/days: auto/days: 1/' "$fixture_backup" > .trmnlp.yml
+./bin/trmnlp build >/dev/null
+for layout in full half_horizontal half_vertical quadrant; do
+    out="_build/${layout}.html"
+    [ "$(grep -c 'class="cg-col"' "$out")" -eq 1 ] || {
+        echo "FAIL: $out did not honour days=1 (expected one day column)"; exit 1; }
+    panel_w=$(grep -oE 'data-panel-w="[0-9]+"' "$out" | grep -oE '[0-9]+')
+    grep -q "data-content-w=\"${panel_w}\"" "$out" || {
+        echo "FAIL: $out single column does not fill the usable width"; exit 1; }
+done
+python3 scripts/geometry_check.py || exit 1
+
 cp "$fixture_backup" .trmnlp.yml
 rm -f "$fixture_backup"
 trap - EXIT
 ./bin/trmnlp build >/dev/null
 
-echo "OK: lint clean, both axis modes rendered from the .trmnlp.yml fixture"
+echo "OK: lint clean; both axis modes and the single-day mode rendered from the .trmnlp.yml fixture"
