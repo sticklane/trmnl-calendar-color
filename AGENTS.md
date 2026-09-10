@@ -39,8 +39,8 @@ reaches for utility classes over hand-written spacing.
 `scripts/check.sh` fails if the tree disagrees. Four hand-maintained
 copies is how they drifted.
 
-Colours and the axis mode are the plugin's own custom fields
-(`cal_map`, `default_color`, `axis_mode`), declared in `src/settings.yml`
+Colours, the axis mode and the day count are the plugin's own custom
+fields (`cal_map`, `default_color`, `axis_mode`, `days`), declared in `src/settings.yml`
 and edited on the plugin's settings page. The values in the markup are
 only the empty-field fallback.
 

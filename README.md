@@ -85,6 +85,7 @@ Deploy by pasting each `src/*.liquid` into its markup tab, per Setup above.
 | Calendar colors | `cal_map` | one `calendar-id=colour` per line; commas also work. Ids are the `calname` values in the merge variable |
 | Default color | `default_color` | fill for any calendar the map does not list |
 | Hour axis | `axis_mode` | `fit` (an hour either side of the day's events) or `day` (midnight to midnight) |
+| Days shown | `days` | `auto` (the layout's own span) or `1` (single-day mode: today only, one column across the whole width, same hour axis) |
 
 They are declared in `src/settings.yml` and edited on usetrmnl.com. The
 values written into the markup are only the empty-field fallback. The
@@ -109,6 +110,7 @@ minutes.
 ## Gotchas
 
 - **Only four inks print solid.** On the OG B/W/R/Y panel black, white, red and yellow are inks; every other token — grey steps, other hues, any opacity — is dithered into a speckle that reads as fuzz at 800x480. That is why weekends are marked with a heavier column rule instead of a shaded column, block text is black or white only, and `check.sh` greps the built HTML for greys, `rgba(`, `opacity:` and fractional pixel offsets.
+- **A few blends are worth using as fills.** `orange` is a red-and-yellow tile, `pink` a red-and-white one, and a `-45`..`-75` step of a hue (say `yellow-60`) is that hue's dots on a white ground. The `-10`..`-40` steps put black dots on the solid hue. Judge them on the server render on the plugin's settings page: the markup editor's live preview draws the tiles inconsistently between capture sizes. The busiest calendar takes the palest tint and the rare calendars the accents.
 - **Hue tokens collapse on grayscale panels, but not on a colour one.** `bg--red` and `bg--blue` at the same lightness step render as the *same* dither on the 1-bit TRMNL and the same gray on TRMNL X. The placeholder `CAL_MAP` in this repo is therefore grayscale steps spaced ≥ 15 apart plus glyphs. A TRMNL OG (B/W/R/Y) panel does distinguish hues: the framework dithers a hue token into the device's ink set, selected by the `screen--color-4bwry` palette. Check before you choose - the markup editor's device dropdown has a `TRMNL OG (B/W/R/Y)` entry that previews exactly that mapping.
 - **Google's own hex colors are ignored on purpose.** `background_color` is present in the JSON, but mapping arbitrary hex to a dither pattern in Liquid is brittle and Google's palette shifted between API versions. Explicit `CAL_MAP` is deterministic.
 - **Day grouping uses `start_full | date`.** Timed events carry their offset (`...-05:00`), so the day key is local. All-day events are `YYYY-MM-DD` strings and parse fine. Multi-day all-day events appear once, under their start date (native expands them per day — not replicated here).
