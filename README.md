@@ -82,7 +82,7 @@ Deploy by pasting each `src/*.liquid` into its markup tab, per Setup above.
 
 | field | keyname | what |
 |---|---|---|
-| Calendar colors | `cal_map` | one `calendar-id=colour` per line; commas also work. Ids are the `calname` values in the merge variable |
+| Calendar colors | `cal_map` | one `calendar-id=colour` per line; commas also work. Ids are the `calname` values in the merge variable. An optional label after the colour (`id=black Personal`) names the calendar in the legend |
 | Default color | `default_color` | fill for any calendar the map does not list |
 | Hour axis | `axis_mode` | `fit` (an hour either side of the day's events) or `day` (midnight to midnight) |
 | Days shown | `days` | `auto` (the layout's own span) or `1` (single-day mode: today only, one column across the whole width, same hour axis) |
@@ -106,6 +106,13 @@ column width and one measurement, `CHAR_W100`: the framework's
 face or the weight and that one number moves. `TIGHT_LINE_H` is the
 smaller line (10px) a block drops to when its text does not fit its
 minutes.
+
+## What the grid draws
+
+- **Quiet calendars show times only.** A calendar whose events all carry one summary (a corporate calendar seen from outside is "Busy", "Busy", "Busy") has nothing to say in its titles, so its blocks show `9:00-10:30am` alone. Two events or more are needed before a calendar counts as quiet.
+- **Times are compact.** `9:00-10:30am`, and the meridian on both ends only when they differ: `11:30am-1:00pm`.
+- **A marker crosses today's column at the time of the render**, from `trmnl.system.timestamp_utc` and the user's `utc_offset`. The device refreshes every 15 minutes, so it is never further off than that.
+- **Light fills get a black hairline, dark fills a white one.** The black edge keeps a pale block crisp against the white column and against a sibling in the same tile; the white edge is what separates two nested black blocks.
 
 ## Gotchas
 

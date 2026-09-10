@@ -290,11 +290,12 @@
   .cg-block--tight .cg-line { font: bold {{ TIGHT_LINE_H }}px/{{ TIGHT_LINE_H }}px var(--label-small-font-family); }
   .cg-adbar { overflow: hidden; border: 1px solid #fff; }
   .cg-adbar.cg-block--ink { border-color: #000; }
-  /* The render-time marker: a 2px ink rule across today's column, with a
-     white hairline either side so it also reads across a black block. */
+  /* The render-time marker: a 2px ink rule across today's column under a
+     white hairline, so it also reads across a black block and hides no
+     more than three pixels of any text it crosses. */
   .cg-now {
-    position: absolute; left: 0; right: 0; height: 4px;
-    border-block: 1px solid #fff; box-sizing: border-box;
+    position: absolute; left: 0; right: 0; height: 3px;
+    border-top: 1px solid #fff; box-sizing: border-box;
   }
   /* Day headers in bold, like the block text they sit over. */
   .cg-row--head .label { font-weight: bold; }
