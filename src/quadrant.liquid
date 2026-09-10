@@ -34,7 +34,9 @@
 {%- comment -%} ---- colours: overridden by the plugin's custom fields ---- {%- endcomment -%}
 {%- assign CAL_MAP_DEFAULT = "you@gmail.com=black,work@example.com=red,shared@group.calendar.google.com=yellow" -%}
 {%- assign DEFAULT_COLOR_FALLBACK = "black" -%}
-{%- assign LIGHT_FILLS = "white,yellow,gray-10,gray-15,gray-20,gray-25,gray-30,gray-35" | split: "," -%}
+{%- comment -%} fills that take BLACK text. On the B/W/R/Y panel orange is a red-and-yellow
+     tile and pink a red-and-white one; both are light enough for black and too light for white. {%- endcomment -%}
+{%- assign LIGHT_FILLS = "white,yellow,orange,pink,gray-10,gray-15,gray-20,gray-25,gray-30,gray-35" | split: "," -%}
 
 {%- comment -%} ---- layout ---- {%- endcomment -%}
 {%- assign SHOW_ALLDAY = true -%}

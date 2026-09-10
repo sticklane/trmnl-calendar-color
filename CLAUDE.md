@@ -33,6 +33,11 @@ hues, opacity — is dithered into speckle on the OG B/W/R/Y panel and
 reads as fuzz. `check.sh` greps for greys, `rgba(`, `opacity:` and
 fractional pixel offsets and fails on any of them.
 
+Two blends are allowed as event fills: `orange` (a red-and-yellow tile)
+and `pink` (a red-and-white tile). Both are light, so the template's
+`LIGHT_FILLS` list gives them black text. Keep the fixture's `cal_map`
+using them so the render proves that rule.
+
 ## Verify against the renderer, not just the linter
 
 `trmnlp lint` checks TRMNL best practices; it does not prove the Liquid
