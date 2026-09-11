@@ -86,21 +86,14 @@ custom_fields:
     placeholder: |
       fun@group.calendar.google.com
     optional: true
-  - keyname: bw_devices
-    field_type: text
-    name: 1-bit devices
-    description: >-
-      Friendly ids of devices that render in black and white, one per line
-      (the id on the device's page). On those the colours below apply.
-    optional: true
   - keyname: cal_map_bw
     field_type: text
     name: Calendar colors (1-bit)
     description: >-
-      The map used on the 1-bit devices, same syntax. Use black, white and
-      gray-10 to gray-75 (the number is the darkness); text is black on
-      gray-35 and lighter, white on gray-40 and darker. Empty maps the
-      colour map automatically: yellow tints to white, red to gray-65,
-      orange to gray-30, pink to gray-25.
+      The map a black-and-white device uses, same syntax. Use black, white
+      and gray-10 to gray-75 (the number is the lightness: gray-75 is nearly
+      white); text is black on gray-40 and lighter, white on gray-35 and
+      darker. Empty maps the colour map automatically: yellow tints to
+      white, red to gray-35, orange to gray-60, pink to gray-70.
     optional: true
 

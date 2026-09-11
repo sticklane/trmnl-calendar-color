@@ -42,10 +42,13 @@ hues, opacity — is dithered into speckle on the OG B/W/R/Y panel and
 reads as fuzz. `check.sh` greps for greys, `rgba(`, `opacity:` and
 fractional pixel offsets and fails on any of them.
 
-On a 1-bit device (`bw_devices`) the render takes `cal_map_bw`, greys
-only: `gray-10`..`gray-35` carry black text, `gray-40` and darker white.
-`check.sh` builds the fixture once as a 1-bit device and refuses any hue
-token there; the colour build still refuses any grey.
+A black-and-white device takes `cal_map_bw`, greys only. The number is
+the lightness, measured in the framework's 1-bit tiles: `gray-40` and
+up carry black text, `gray-35` and down white. It reaches the
+render as CSS scoped to `.screen--1bit,.screen--2bit` (class `cg-cal-N`
+per calendar) because the render cannot tell its device. `check.sh`
+asserts those rules name greys and never a hue; the markup's own tokens
+still never include a grey.
 
 Blends are allowed as event fills: `orange` (a red-and-yellow tile),
 `pink` (a red-and-white tile), and the `-45`..`-75` tints of red, yellow,

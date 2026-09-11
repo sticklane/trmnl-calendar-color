@@ -34,13 +34,12 @@ variables:
   days: auto
   mode: grid
   agenda_calendars: ''
-  bw_devices: BW0001
   cal_map_bw: |
     you@gmail.com=black Personal
     work@example.com=white Work
-    shared@group.calendar.google.com=gray-20 Family
+    shared@group.calendar.google.com=gray-70 Family
     corp@example.com=white
-    fun@example.com=gray-75 Fun
+    fun@example.com=gray-25 Fun
   google_calendar_12345:
     instance_name: Calendar
     today_in_tz: '2026-09-07T00:00:00.000-05:00'

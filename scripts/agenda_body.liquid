@@ -60,6 +60,7 @@
 
 <style>
   .ag-wrap { display: flex; flex-direction: column; width: 100%; align-self: flex-start; overflow: hidden; }
+  {{ BW_CSS }}
   .ag-cols { display: flex; flex: 0 0 {{ AG_BUDGET }}px; overflow: hidden; }
   .ag-col { flex: 0 0 {{ AG_COL_W }}px; display: flex; flex-direction: column; overflow: hidden; }
   .ag-col + .ag-col { border-left: 1px dotted currentColor; }
@@ -186,7 +187,7 @@
         {%- if date_txt == last_date -%}{%- assign date_show = "" -%}{%- else -%}{%- assign date_show = date_txt -%}{%- endif -%}
         {%- assign last_date = date_txt -%}
         <div class="ag-row" data-month="{{ month_key }}" data-date="{{ date_txt }}" data-cal="{{ ev.calname }}" data-text="{{ text | escape }}" data-col="{{ col }}">
-          <span class="ag-swatch bg--{{ CAL_TOKENS[ci] }}"></span>
+          <span class="ag-swatch cg-cal-{{ ci }} bg--{{ CAL_TOKENS[ci] }}"></span>
           <span class="ag-date px--1"><span class="label label--small ag-line">{{ date_show }}</span></span>
           <span class="ag-time"><span class="label label--small ag-line">{{ time_txt }}</span></span>
           <span class="ag-text"><span class="label label--small ag-line">{{ text }}</span></span>

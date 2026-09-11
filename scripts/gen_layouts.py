@@ -24,8 +24,10 @@ SHARED = """{%- assign src = google_calendar_12345 -%}
 {%- assign DEFAULT_COLOR_FALLBACK = "black" -%}
 {%- comment -%} fills that take BLACK text. On the B/W/R/Y panel orange is a red-and-yellow
      tile and pink a red-and-white one. A -45..-75 step is the hue's dots on a white ground,
-     and yellow-10..-40 is yellow under a sparse black dot; all of those stay light. {%- endcomment -%}
-{%- assign LIGHT_FILLS = "white,yellow,orange,pink,yellow-10,yellow-15,yellow-20,yellow-25,yellow-30,yellow-35,yellow-40,yellow-45,yellow-50,yellow-55,yellow-60,yellow-65,yellow-70,yellow-75,orange-45,orange-50,orange-55,orange-60,orange-65,orange-70,orange-75,pink-45,pink-50,pink-55,pink-60,pink-65,pink-70,pink-75,red-45,red-50,red-55,red-60,red-65,red-70,red-75,gray-10,gray-15,gray-20,gray-25,gray-30,gray-35" | split: "," -%}
+     and yellow-10..-40 is yellow under a sparse black dot; all of those stay light. A grey's
+     number is its lightness (gray-75 is nearly white, gray-10 nearly black), measured in the
+     framework's 1-bit tiles, so gray-40 and up take black text. {%- endcomment -%}
+{%- assign LIGHT_FILLS = "white,yellow,orange,pink,yellow-10,yellow-15,yellow-20,yellow-25,yellow-30,yellow-35,yellow-40,yellow-45,yellow-50,yellow-55,yellow-60,yellow-65,yellow-70,yellow-75,orange-45,orange-50,orange-55,orange-60,orange-65,orange-70,orange-75,pink-45,pink-50,pink-55,pink-60,pink-65,pink-70,pink-75,red-45,red-50,red-55,red-60,red-65,red-70,red-75,gray-40,gray-45,gray-50,gray-55,gray-60,gray-65,gray-70,gray-75" | split: "," -%}
 
 {%- comment -%} ---- layout ---- {%- endcomment -%}
 {%- assign SHOW_ALLDAY = true -%}

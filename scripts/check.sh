@@ -43,7 +43,7 @@ for layout in full half_horizontal half_vertical quadrant; do
         echo "FAIL: $out blocks all share one geometry"; exit 1; }
 
     # Every block carries a calendar fill and black-or-white text.
-    grep -qE 'cg-block cg-b[0-9]+ bg--' "$out" || { echo "FAIL: $out blocks are not filled with a calendar colour"; exit 1; }
+    grep -qE 'cg-block cg-cal-[0-9]+ cg-b[0-9]+ bg--' "$out" || { echo "FAIL: $out blocks are not filled with a calendar colour"; exit 1; }
     grep -qE 'cg-line text--(white|black)' "$out" || { echo "FAIL: $out block text has no contrast class"; exit 1; }
     if grep -oE 'cg-line text--[a-z0-9-]+' "$out" | grep -vqE 'text--(white|black)$'; then
         echo "FAIL: $out prints block text in a colour other than black or white"; exit 1
@@ -133,16 +133,15 @@ for layout in full half_horizontal half_vertical quadrant; do
 done
 python3 scripts/geometry_check.py || exit 1
 
-# 1-bit device: the device id is in bw_devices, so cal_map_bw applies and
-# no hue token reaches the markup. Greys are allowed here and only here.
-build_variant 's/bw_devices: .*/bw_devices: ABC123/'   # trmnlp's fake friendly_id
+# 1-bit devices: the grey map is CSS scoped to the framework's 1-bit and
+# 2-bit screen classes, present in every build; it names greys, never a hue.
 for layout in full half_horizontal half_vertical quadrant; do
     out="_build/${layout}.html"
-    if grep -qE 'bg--(red|yellow|orange|pink)' "$out"; then
-        echo "FAIL: $out uses a hue token on a 1-bit device"; exit 1; fi
-    grep -q 'bg--gray-' "$out" || { echo "FAIL: $out did not apply the 1-bit map"; exit 1; }
+    grep -q 'screen--1bit,.screen--2bit) .cg-cal-0{--tn-bg-color:var(--bg-' "$out" || { echo "FAIL: $out has no 1-bit grey rules"; exit 1; }
+    if grep -oE 'screen--2bit\) \.cg-cal-[0-9]+\{--tn-bg-color:var\(--bg-[a-z0-9-]+' "$out" | grep -qE 'bg-(red|yellow|orange|pink)'; then
+        echo "FAIL: $out maps a calendar to a hue on a 1-bit screen"; exit 1; fi
+    grep -q 'cg-cal-[0-9]*{--tn-bg-color:var(--bg-gray-' "$out" || { echo "FAIL: $out 1-bit map has no grey"; exit 1; }
 done
-python3 scripts/geometry_check.py || exit 1
 
 # Agenda view: one-off events from the named calendar, by month.
 build_variant -e 's/mode: grid/mode: agenda/' -e "s/agenda_calendars: ''/agenda_calendars: fun@example.com/"

@@ -38,8 +38,10 @@
 {%- assign DEFAULT_COLOR_FALLBACK = "black" -%}
 {%- comment -%} fills that take BLACK text. On the B/W/R/Y panel orange is a red-and-yellow
      tile and pink a red-and-white one. A -45..-75 step is the hue's dots on a white ground,
-     and yellow-10..-40 is yellow under a sparse black dot; all of those stay light. {%- endcomment -%}
-{%- assign LIGHT_FILLS = "white,yellow,orange,pink,yellow-10,yellow-15,yellow-20,yellow-25,yellow-30,yellow-35,yellow-40,yellow-45,yellow-50,yellow-55,yellow-60,yellow-65,yellow-70,yellow-75,orange-45,orange-50,orange-55,orange-60,orange-65,orange-70,orange-75,pink-45,pink-50,pink-55,pink-60,pink-65,pink-70,pink-75,red-45,red-50,red-55,red-60,red-65,red-70,red-75,gray-10,gray-15,gray-20,gray-25,gray-30,gray-35" | split: "," -%}
+     and yellow-10..-40 is yellow under a sparse black dot; all of those stay light. A grey's
+     number is its lightness (gray-75 is nearly white, gray-10 nearly black), measured in the
+     framework's 1-bit tiles, so gray-40 and up take black text. {%- endcomment -%}
+{%- assign LIGHT_FILLS = "white,yellow,orange,pink,yellow-10,yellow-15,yellow-20,yellow-25,yellow-30,yellow-35,yellow-40,yellow-45,yellow-50,yellow-55,yellow-60,yellow-65,yellow-70,yellow-75,orange-45,orange-50,orange-55,orange-60,orange-65,orange-70,orange-75,pink-45,pink-50,pink-55,pink-60,pink-65,pink-70,pink-75,red-45,red-50,red-55,red-60,red-65,red-70,red-75,gray-40,gray-45,gray-50,gray-55,gray-60,gray-65,gray-70,gray-75" | split: "," -%}
 
 {%- comment -%} ---- layout ---- {%- endcomment -%}
 {%- assign SHOW_ALLDAY = true -%}
@@ -85,27 +87,18 @@
   yellow are solid inks - everything else dithers into speckle.
 {%- endcomment -%}
 {%- assign CF = trmnl.plugin_settings.custom_fields_values -%}
-{%- comment -%}
-  A 1-bit device turns every hue into a grey dither (yellow-60 is a 70%
-  black one), so the devices listed in `bw_devices` take `cal_map_bw`
-  instead of `cal_map`. trmnl.device.friendly_id names the device the
-  screen is rendered for; trmnlp fakes it as ABC123.
-{%- endcomment -%}
-{%- assign DEVICE_ID = trmnl.device.friendly_id | default: "" | strip -%}
-{%- assign BW_RAW = CF.bw_devices | default: bw_devices | default: "" | strip | replace: ",", "
-" -%}
-{%- assign IS_BW = false -%}
-{%- if DEVICE_ID != "" -%}
-  {%- assign bw_list = BW_RAW | split: "
-" -%}
-  {%- for b in bw_list -%}{%- assign b_s = b | strip -%}{%- if b_s == DEVICE_ID -%}{%- assign IS_BW = true -%}{%- break -%}{%- endif -%}{%- endfor -%}
-{%- endif -%}
 {%- assign CAL_MAP_RAW = CF.cal_map | default: cal_map | default: "" | strip -%}
-{%- assign BW_MAP_RAW = CF.cal_map_bw | default: cal_map_bw | default: "" | strip -%}
-{%- assign BW_AUTO = false -%}
-{%- if IS_BW -%}
-  {%- if BW_MAP_RAW != "" -%}{%- assign CAL_MAP_RAW = BW_MAP_RAW -%}{%- else -%}{%- assign BW_AUTO = true -%}{%- endif -%}
-{%- endif -%}
+{%- comment -%}
+  A 1-bit panel turns every hue into a grey dither (yellow-60 becomes a
+  70% black one), so a second map, `cal_map_bw`, holds greys for it. The
+  render cannot tell which device it is for, but the framework marks a
+  1-bit or 2-bit screen with a class, so the grey map is emitted as CSS
+  scoped to that class and the colour map stays in the markup.
+{%- endcomment -%}
+{%- assign BW_MAP_RAW = CF.cal_map_bw | default: cal_map_bw | default: "" | strip | replace: ",", "
+" -%}
+{%- assign BW_MAP = BW_MAP_RAW | split: "
+" -%}
 {%- if CAL_MAP_RAW == "" -%}{%- assign CAL_MAP_RAW = CAL_MAP_DEFAULT -%}{%- endif -%}
 {%- assign CAL_MAP_RAW = CAL_MAP_RAW | replace: ",", "
 " -%}
@@ -113,7 +106,6 @@
 " -%}
 {%- assign DEFAULT_COLOR = CF.default_color | default: default_color | default: "" | strip -%}
 {%- if DEFAULT_COLOR == "" -%}{%- assign DEFAULT_COLOR = DEFAULT_COLOR_FALLBACK -%}{%- endif -%}
-{%- if IS_BW and DEFAULT_COLOR != "white" -%}{%- assign DEFAULT_COLOR = "black" -%}{%- endif -%}
 {%- assign AXIS_MODE = CF.axis_mode | default: axis_mode | default: "" | strip -%}
 {%- if AXIS_MODE != "day" and AXIS_MODE != "fit" -%}{%- assign AXIS_MODE = AXIS_MODE_FALLBACK -%}{%- endif -%}
 {%- comment -%} `days` = 1 is the single-day mode: one column, the layout's full width, the same hour axis. {%- endcomment -%}
@@ -145,6 +137,7 @@
 {%- endcomment -%}
 {%- assign tokens_s = "" -%}
 {%- assign labels_s = "" -%}
+{%- assign bw_tokens_s = "" -%}
 {%- for c in cals -%}
   {%- assign t = "" -%}
   {%- assign lab = "" -%}
@@ -159,22 +152,34 @@
     {%- endif -%}
   {%- endfor -%}
   {%- if t == "" -%}{%- assign t = DEFAULT_COLOR -%}{%- endif -%}
-  {%- comment -%} no 1-bit map given: fold each hue onto a grey that keeps its text readable {%- endcomment -%}
-  {%- if BW_AUTO -%}
-    {%- assign hue = t | split: "-" | first -%}
-    {%- case hue -%}
-      {%- when "yellow" -%}{%- assign t = "white" -%}
-      {%- when "red" -%}{%- assign t = "gray-65" -%}
-      {%- when "orange" -%}{%- assign t = "gray-30" -%}
-      {%- when "pink" -%}{%- assign t = "gray-25" -%}
-    {%- endcase -%}
-  {%- endif -%}
   {%- if lab == "" -%}{%- assign lab = names[c] | default: c | split: "@" | first -%}{%- endif -%}
   {%- assign tokens_s = tokens_s | append: t | append: "," -%}
   {%- assign labels_s = labels_s | append: lab | append: "," -%}
+  {%- comment -%}
+    The 1-bit token: from cal_map_bw when it names the calendar, else the
+    hue folded onto a grey that keeps its text readable.
+  {%- endcomment -%}
+  {%- assign bt = "" -%}
+  {%- for pair in BW_MAP -%}
+    {%- assign kv = pair | strip | split: "=" -%}
+    {%- assign k = kv[0] | strip -%}
+    {%- if k == c -%}{%- assign btl = kv[1] | strip | split: " " -%}{%- assign bt = btl[0] -%}{%- break -%}{%- endif -%}
+  {%- endfor -%}
+  {%- if bt == "" -%}
+    {%- assign hue = t | split: "-" | first -%}
+    {%- case hue -%}
+      {%- when "yellow" -%}{%- assign bt = "white" -%}
+      {%- when "red" -%}{%- assign bt = "gray-35" -%}
+      {%- when "orange" -%}{%- assign bt = "gray-60" -%}
+      {%- when "pink" -%}{%- assign bt = "gray-70" -%}
+      {%- else -%}{%- assign bt = t -%}
+    {%- endcase -%}
+  {%- endif -%}
+  {%- assign bw_tokens_s = bw_tokens_s | append: bt | append: "," -%}
 {%- endfor -%}
 {%- assign CAL_TOKENS = tokens_s | split: "," -%}
 {%- assign CAL_LABELS = labels_s | split: "," -%}
+{%- assign BW_TOKENS = bw_tokens_s | split: "," -%}
 
 {%- assign texts_s = "" -%}
 {%- for t in CAL_TOKENS -%}
@@ -183,6 +188,29 @@
   {%- assign texts_s = texts_s | append: txt | append: "," -%}
 {%- endfor -%}
 {%- assign CAL_TEXTS = texts_s | split: "," -%}
+{%- assign bw_texts_s = "" -%}
+{%- for t in BW_TOKENS -%}
+  {%- assign txt = "white" -%}
+  {%- for lt in LIGHT_FILLS -%}{%- if lt == t -%}{%- assign txt = "black" -%}{%- break -%}{%- endif -%}{%- endfor -%}
+  {%- assign bw_texts_s = bw_texts_s | append: txt | append: "," -%}
+{%- endfor -%}
+{%- assign BW_TEXTS = bw_texts_s | split: "," -%}
+{%- comment -%}
+  The grey map as CSS. On a 1-bit or 2-bit screen each calendar's
+  elements (class cg-cal-N) take the grey token's fill variables, its
+  lines the matching text variables, and a block's hairline follows the
+  text colour. The framework's own utilities set these same custom
+  properties, so nothing here names a property its lint counts.
+{%- endcomment -%}
+{%- capture BW_CSS -%}
+{%- for bt in BW_TOKENS -%}
+  {%- assign i = forloop.index0 -%}
+  {%- assign btxt = BW_TEXTS[i] -%}
+  {%- if btxt == "black" -%}{%- assign bline = "#000" -%}{%- else -%}{%- assign bline = "#fff" -%}{%- endif -%}
+  .trmnl :is(.screen--1bit,.screen--2bit) .cg-cal-{{ i }}{--tn-bg-color:var(--bg-{{ bt }}-color);--tn-bg-image:var(--bg-{{ bt }}-image,none);border-color:{{ bline }}}
+  .trmnl :is(.screen--1bit,.screen--2bit) .cg-cal-{{ i }} :is(.cg-line,.ag-line){--tn-text-color:var(--text-{{ btxt }}-color);--tn-text-image:var(--text-{{ btxt }}-image,none)}
+{%- endfor -%}
+{%- endcapture -%}
 
 {%- comment -%}
   A quiet calendar is one whose events all carry the same summary, which
@@ -401,6 +429,7 @@
 
 <style>
   .ag-wrap { display: flex; flex-direction: column; width: 100%; align-self: flex-start; overflow: hidden; }
+  {{ BW_CSS }}
   .ag-cols { display: flex; flex: 0 0 {{ AG_BUDGET }}px; overflow: hidden; }
   .ag-col { flex: 0 0 {{ AG_COL_W }}px; display: flex; flex-direction: column; overflow: hidden; }
   .ag-col + .ag-col { border-left: 1px dotted currentColor; }
@@ -527,7 +556,7 @@
         {%- if date_txt == last_date -%}{%- assign date_show = "" -%}{%- else -%}{%- assign date_show = date_txt -%}{%- endif -%}
         {%- assign last_date = date_txt -%}
         <div class="ag-row" data-month="{{ month_key }}" data-date="{{ date_txt }}" data-cal="{{ ev.calname }}" data-text="{{ text | escape }}" data-col="{{ col }}">
-          <span class="ag-swatch bg--{{ CAL_TOKENS[ci] }}"></span>
+          <span class="ag-swatch cg-cal-{{ ci }} bg--{{ CAL_TOKENS[ci] }}"></span>
           <span class="ag-date px--1"><span class="label label--small ag-line">{{ date_show }}</span></span>
           <span class="ag-time"><span class="label label--small ag-line">{{ time_txt }}</span></span>
           <span class="ag-text"><span class="label label--small ag-line">{{ text }}</span></span>
@@ -560,6 +589,7 @@
      are avoided throughout this file, comments included, because the check
      is a plain substring scan. Reach for a utility class instead. */
   .cg-wrap { display: flex; flex-direction: column; width: 100%; align-self: flex-start; overflow: hidden; }
+  {{ BW_CSS }}
   .cg-row { display: flex; }
   .cg-row--head { align-items: flex-end; }
   .cg-axis { flex: 0 0 var(--cg-axis-w); }
@@ -628,7 +658,7 @@
 
 <div class="view view--{{ VIEW }}">
   <div class="layout">
-    <div class="cg-wrap" data-device="{{ DEVICE_ID }}" data-bw="{{ IS_BW }}" data-grid-h="{{ GRID_H }}" data-hour-h="{{ HOUR_H }}" data-axis-mode="{{ AXIS_MODE }}" data-axis-start="{{ GRID_START_H }}" data-axis-end="{{ GRID_END_H }}" data-title-chars="{{ TITLE_CHARS }}" data-panel-h="{{ PANEL_H }}" data-panel-w="{{ PANEL_W }}" data-content-w="{{ COL_W | times: NUM_DAYS | plus: AXIS_W }}" data-line-h="{{ LINE_H }}" data-tight-line-h="{{ TIGHT_LINE_H }}" data-indent-w="{{ INDENT_W }}" data-max-depth="{{ MAX_DEPTH }}" data-total-h="{{ HEAD_H | plus: AD_H | plus: GRID_H | plus: LEGEND_H }}" style="--cg-axis-w:{{ AXIS_W }}px;--cg-col-w:{{ COL_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px;--cg-legend-h:{{ LEGEND_H }}px">
+    <div class="cg-wrap" data-bw-tokens="{{ BW_TOKENS | join: "," }}" data-grid-h="{{ GRID_H }}" data-hour-h="{{ HOUR_H }}" data-axis-mode="{{ AXIS_MODE }}" data-axis-start="{{ GRID_START_H }}" data-axis-end="{{ GRID_END_H }}" data-title-chars="{{ TITLE_CHARS }}" data-panel-h="{{ PANEL_H }}" data-panel-w="{{ PANEL_W }}" data-content-w="{{ COL_W | times: NUM_DAYS | plus: AXIS_W }}" data-line-h="{{ LINE_H }}" data-tight-line-h="{{ TIGHT_LINE_H }}" data-indent-w="{{ INDENT_W }}" data-max-depth="{{ MAX_DEPTH }}" data-total-h="{{ HEAD_H | plus: AD_H | plus: GRID_H | plus: LEGEND_H }}" style="--cg-axis-w:{{ AXIS_W }}px;--cg-col-w:{{ COL_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px;--cg-legend-h:{{ LEGEND_H }}px">
 
       {%- comment -%} ---------- day header row ---------- {%- endcomment -%}
       <div class="cg-row cg-row--head">
@@ -675,7 +705,7 @@
                 {%- assign token = CAL_TOKENS[ci] -%}
                 {%- assign txt = CAL_TEXTS[ci] -%}
                 {%- assign ad_title = ev.summary | truncate: TITLE_CHARS -%}
-                <div class="cg-adbar bg--{{ token }}{% if txt == "black" %} cg-block--ink{% endif %}" data-allday="true" data-text="{{ ad_title | escape }}">
+                <div class="cg-adbar cg-cal-{{ ci }} bg--{{ token }}{% if txt == "black" %} cg-block--ink{% endif %}" data-allday="true" data-text="{{ ad_title | escape }}">
                   <span class="label label--small cg-line text--{{ txt }}">{{ ad_title }}</span>
                 </div>
               {%- endfor -%}
@@ -895,7 +925,7 @@
               {%- assign bi = bi | plus: 1 -%}
               {%- assign right = COL_W | minus: slot_right -%}
               {%- assign block_css = block_css | append: ".cg-b" | append: bi | append: "{top:" | append: top | append: "px;height:" | append: hgt | append: "px;left:" | append: slot_left | append: "px;right:" | append: right | append: "px}" -%}
-              <div class="cg-block cg-b{{ bi }} bg--{{ token }}{% if lh < LINE_H %} cg-block--tight{% endif %}{% if txt == "black" %} cg-block--ink{% endif %}" data-block="{{ top }},{{ hgt }},{{ left }},{{ lines }},{{ lh }}" data-slot="{{ gi }},{{ k }},{{ slot_left }},{{ slot_right }}" data-clock="{{ ctop }},{{ cbot }}" data-tc="{{ title_chars }}" data-form="{{ form }}" data-times="{{ times }}" data-title="{{ title | escape }}">
+              <div class="cg-block cg-cal-{{ ci }} cg-b{{ bi }} bg--{{ token }}{% if lh < LINE_H %} cg-block--tight{% endif %}{% if txt == "black" %} cg-block--ink{% endif %}" data-block="{{ top }},{{ hgt }},{{ left }},{{ lines }},{{ lh }}" data-slot="{{ gi }},{{ k }},{{ slot_left }},{{ slot_right }}" data-clock="{{ ctop }},{{ cbot }}" data-tc="{{ title_chars }}" data-form="{{ form }}" data-times="{{ times }}" data-title="{{ title | escape }}">
                 {%- if form == 2 -%}
                   <span class="label label--small cg-line text--{{ txt }}">{{ title }}</span>
                   <span class="label label--small cg-line text--{{ txt }}">{{ times }}</span>
@@ -933,7 +963,7 @@
           {%- for c in cals -%}
             {%- assign token = CAL_TOKENS[forloop.index0] -%}
             {%- assign label = CAL_LABELS[forloop.index0] -%}
-            <span class="cg-swatch bg--{{ token }}" data-legend="{{ token }}"></span>
+            <span class="cg-swatch cg-cal-{{ forloop.index0 }} bg--{{ token }}" data-legend="{{ token }}"></span>
             <span class="label label--small px--1">{{ label }}</span>
           {%- endfor -%}
         </div>
