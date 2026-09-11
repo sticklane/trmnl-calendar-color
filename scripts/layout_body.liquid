@@ -436,6 +436,20 @@
               {%- if ev.all_day -%}{%- continue -%}{%- endif -%}
               {%- assign ev_day = ev.start_full | split: "T" | first -%}
               {%- unless ev_day == day_key -%}{%- continue -%}{%- endunless -%}
+              {%- assign ev_i = forloop.index0 -%}
+              {%- comment -%}
+                Siblings: timed events that start at the same instant share
+                the column side by side, k slots wide, instead of nesting.
+                gi is this event's slot, k the group's size.
+              {%- endcomment -%}
+              {%- assign k = 0 -%}
+              {%- assign gi = 0 -%}
+              {%- for o in events -%}
+                {%- if o.all_day -%}{%- continue -%}{%- endif -%}
+                {%- if o.start_full != ev.start_full -%}{%- continue -%}{%- endif -%}
+                {%- if forloop.index0 < ev_i -%}{%- assign gi = gi | plus: 1 -%}{%- endif -%}
+                {%- assign k = k | plus: 1 -%}
+              {%- endfor -%}
 
               {%- assign tb = ev.start_full | split: "T" | last | split: ":" -%}
               {%- assign s1 = tb[0] | times: 60 | plus: tb[1] -%}
@@ -463,6 +477,9 @@
                 {%- assign ob_cbot = ob_p[0] | plus: 0 -%}
                 {%- assign ob_bottom = ob_p[1] | plus: 0 -%}
                 {%- assign ob_tb = ob_p[2] | plus: 0 -%}
+                {%- assign ob_ctop = ob_p[3] | plus: 0 -%}
+                {%- comment -%} a sibling sits beside this block, not above it {%- endcomment -%}
+                {%- if ob_ctop == ctop -%}{%- continue -%}{%- endif -%}
                 {%- if ob_cbot > ctop -%}{%- assign depth = depth | plus: 1 -%}{%- endif -%}
                 {%- if ob_bottom > ctop and ob_tb > floor -%}{%- assign floor = ob_tb -%}{%- endif -%}
               {%- endfor -%}
@@ -471,9 +488,18 @@
               {%- assign indent = depth -%}
               {%- if indent > MAX_DEPTH -%}{%- assign indent = MAX_DEPTH -%}{%- endif -%}
               {%- assign left = indent | times: INDENT_W -%}
+              {%- assign slot_w = COL_W | minus: left | divided_by: k -%}
+              {%- assign slot_left = gi | times: slot_w | plus: left -%}
+              {%- assign slot_right = gi | plus: 1 | times: slot_w | plus: left -%}
+              {%- assign k_last = k | minus: 1 -%}
+              {%- if gi == k_last -%}{%- assign slot_right = COL_W -%}{%- endif -%}
               {%- assign lost = indent | times: INDENT_CHARS -%}
               {%- assign one_chars = ONE_LINE_CHARS | minus: lost -%}
               {%- assign title_chars = TITLE_CHARS | minus: lost -%}
+              {%- if k > 1 -%}
+                {%- assign one_chars = slot_right | minus: slot_left | times: 100 | divided_by: CHAR_W100 | minus: 2 -%}
+                {%- assign title_chars = one_chars | minus: 1 -%}
+              {%- endif -%}
 
               {%- comment -%}
                 The title comes first and is the last thing to give way.
@@ -521,6 +547,10 @@
                 {%- assign lost = indent | times: INDENT_W | times: 100 | plus: TIGHT_CHAR_W100 | minus: 1 | divided_by: TIGHT_CHAR_W100 -%}
                 {%- assign one_chars = ONE_LINE_CHARS | times: CHAR_W100 | divided_by: TIGHT_CHAR_W100 | minus: lost -%}
                 {%- assign title_chars = TITLE_CHARS | times: CHAR_W100 | divided_by: TIGHT_CHAR_W100 | minus: lost -%}
+                {%- if k > 1 -%}
+                  {%- assign one_chars = slot_right | minus: slot_left | times: 100 | divided_by: TIGHT_CHAR_W100 | minus: 2 -%}
+                  {%- assign title_chars = one_chars | minus: 1 -%}
+                {%- endif -%}
                 {%- if quiet != "true" -%}{%- assign title = ev.summary | truncate: title_chars -%}{%- endif -%}
                 {%- if title == "" -%}{%- assign one = times -%}{%- else -%}{%- assign one = title | append: "  " | append: times -%}{%- endif -%}
                 {%- if one.size <= one_chars -%}{%- assign lines = 1 -%}{%- else -%}{%- assign lines = 2 -%}{%- endif -%}
@@ -539,13 +569,14 @@
               {%- assign bottom = top | plus: hgt -%}
               {%- if bottom > GRID_H -%}{%- assign more = more | plus: 1 -%}{%- continue -%}{%- endif -%}
               {%- assign text_bottom = top | plus: text_h -%}
-              {%- assign stack = stack | append: cbot | append: ":" | append: bottom | append: ":" | append: text_bottom | append: "," -%}
+              {%- assign stack = stack | append: cbot | append: ":" | append: bottom | append: ":" | append: text_bottom | append: ":" | append: ctop | append: "," -%}
 
               {%- assign token = CAL_TOKENS[ci] -%}
               {%- assign txt = CAL_TEXTS[ci] -%}
               {%- assign bi = bi | plus: 1 -%}
-              {%- assign block_css = block_css | append: ".cg-b" | append: bi | append: "{top:" | append: top | append: "px;height:" | append: hgt | append: "px;left:" | append: left | append: "px}" -%}
-              <div class="cg-block cg-b{{ bi }} bg--{{ token }}{% if lh < LINE_H %} cg-block--tight{% endif %}{% if txt == "black" %} cg-block--ink{% endif %}" data-block="{{ top }},{{ hgt }},{{ left }},{{ lines }},{{ lh }}" data-clock="{{ ctop }},{{ cbot }}" data-tc="{{ title_chars }}" data-form="{{ form }}" data-times="{{ times }}" data-title="{{ title | escape }}">
+              {%- assign right = COL_W | minus: slot_right -%}
+              {%- assign block_css = block_css | append: ".cg-b" | append: bi | append: "{top:" | append: top | append: "px;height:" | append: hgt | append: "px;left:" | append: slot_left | append: "px;right:" | append: right | append: "px}" -%}
+              <div class="cg-block cg-b{{ bi }} bg--{{ token }}{% if lh < LINE_H %} cg-block--tight{% endif %}{% if txt == "black" %} cg-block--ink{% endif %}" data-block="{{ top }},{{ hgt }},{{ left }},{{ lines }},{{ lh }}" data-slot="{{ gi }},{{ k }},{{ slot_left }},{{ slot_right }}" data-clock="{{ ctop }},{{ cbot }}" data-tc="{{ title_chars }}" data-form="{{ form }}" data-times="{{ times }}" data-title="{{ title | escape }}">
                 {%- if form == 2 -%}
                   <span class="label label--small cg-line text--{{ txt }}">{{ title }}</span>
                   <span class="label label--small cg-line text--{{ txt }}">{{ times }}</span>

@@ -21,7 +21,7 @@ TODAY = NODE['today_in_tz'].split('T')[0]
 
 SPAN = re.compile(r'<span class="label label--small cg-line[^"]*">(.*?)</span>', re.S)
 BLOCK = re.compile(
-    r'<div class="cg-block[^"]*"[^>]*data-block="([\d,]+)" data-clock="([\d,]+)" '
+    r'<div class="cg-block[^"]*"[^>]*data-block="([\d,]+)" data-slot="([\d,]+)" data-clock="([\d,]+)" '
     r'data-tc="(\d+)" data-form="(\d)" '
     r'data-times="([^"]*)" data-title="([^"]*)">(.*?)</div>', re.S)
 
@@ -136,6 +136,8 @@ for f in sorted((ROOT / '_build').glob('*.html')):
     indent_w = int(re.search(r'data-indent-w="(\d+)"', h).group(1))
     max_depth = int(re.search(r'data-max-depth="(\d+)"', h).group(1))
 
+    col_w = int(re.search(r'--cg-col-w:(\d+)px', h).group(1))
+
     def clock_px(mins):
         mins = min(max(mins, axis_start * 60), axis_end * 60)
         return (mins - axis_start * 60) * grid_h // span_min
@@ -146,9 +148,10 @@ for f in sorted((ROOT / '_build').glob('*.html')):
         fail.append(f'{name}: no grid columns')
     for chunk in cols:
         day = chunk.split('"', 1)[0]
-        placed = []   # (top, bottom, text_bottom, clock_bottom) per block drawn so far
-        for geom, clock, tc, form, dtimes, dtitle, inner in BLOCK.findall(chunk):
+        placed = []   # (top, bottom, text_bottom, clock_bottom, clock_top, x0, x1) per block drawn so far
+        for geom, slot, clock, tc, form, dtimes, dtitle, inner in BLOCK.findall(chunk):
             top, hgt, left, lines, line_h = (int(x) for x in geom.split(','))
+            gi, k, x0, x1 = (int(x) for x in slot.split(','))
             ctop, cbot = (int(x) for x in clock.split(','))
             tc = int(tc)
             bottom = top + hgt
@@ -177,6 +180,8 @@ for f in sorted((ROOT / '_build').glob('*.html')):
             # The small face carries more characters across the same width,
             # by the same ratio the template uses (hundredths of a px).
             max_tc = title_chars * 665 // (665 * line_h // line_h_full)
+            if k > 1:
+                max_tc = (x1 - x0) * 100 // (712 * line_h // line_h_full)
             if tc > max_tc:
                 fail.append(f'{name} {day}: {title!r} claims {tc} chars, wider than the column ({max_tc})')
             if title.endswith('...') and len(title) != tc:
@@ -204,9 +209,19 @@ for f in sorted((ROOT / '_build').glob('*.html')):
                     fail.append(f'{name} {day}: {want!r} claims clock {ctop}-{cbot}px, '
                                 f'the fixture says {clock_px(s)}-{clock_px(e)}px')
 
+            # Siblings (same clock top) share the column: slot gi of k,
+            # each (col_w - indent) // k wide, the last one to the edge.
+            sib = [p for p in placed if p[4] == ctop]
+            if len(sib) != gi:
+                fail.append(f'{name} {day}: {want!r} claims slot {gi} but {len(sib)} siblings were drawn before it')
+            slot_w = (col_w - left) // k
+            want_x0 = left + gi * slot_w
+            want_x1 = col_w if gi == k - 1 else left + (gi + 1) * slot_w
+            if (x0, x1) != (want_x0, want_x1):
+                fail.append(f'{name} {day}: {want!r} spans x {x0}-{x1}, want {want_x0}-{want_x1} (slot {gi} of {k})')
             # Native placement: the block sits at its clock top and spans
             # its whole duration ...
-            depth = sum(1 for _, _, _, cb in placed if cb > ctop)
+            depth = sum(1 for _, _, _, cb, ct, _, _ in placed if cb > ctop and ct != ctop)
             if top < ctop:
                 fail.append(f'{name} {day}: {want!r} drawn at {top}px, above its clock top {ctop}px')
             if bottom < cbot:
@@ -219,15 +234,15 @@ for f in sorted((ROOT / '_build').glob('*.html')):
                 fail.append(f'{name} {day}: {want!r} nests {depth} deep but is indented '
                             f'{left}px, want {want_left}px')
             # ... and moves down ONLY to clear text it would have covered, never further.
-            floor = max((tb for _, b, tb, _ in placed if b > ctop), default=0)
+            floor = max((tb for _, b, tb, _, ct, _, _ in placed if b > ctop and ct != ctop), default=0)
             if top != max(ctop, floor):
                 fail.append(f'{name} {day}: {want!r} drawn at {top}px; clock top {ctop}px, '
                             f'parent text ends {floor}px')
-            for t, b, tb, _ in placed:
-                if top < tb and bottom > t:
+            for t, b, tb, _, _, px0, px1 in placed:
+                if top < tb and bottom > t and x0 < px1 and x1 > px0:
                     fail.append(f'{name} {day}: {want!r} ({top}-{bottom}) covers the text of the '
                                 f'block at {t}-{tb}')
-            placed.append((top, bottom, top + text_h, cbot))
+            placed.append((top, bottom, top + text_h, cbot, ctop, x0, x1))
         for n in re.findall(r'data-more="(\d+)"', chunk):
             more_total += int(n)
 

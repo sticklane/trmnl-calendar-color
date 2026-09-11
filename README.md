@@ -114,6 +114,8 @@ minutes.
 - **Quiet calendars show times only.** A calendar whose events all carry one summary (a corporate calendar seen from outside is "Busy", "Busy", "Busy") has nothing to say in its titles, so its blocks show `9:00-10:30am` alone. Two events or more are needed before a calendar counts as quiet.
 - **Times are compact.** `9:00-10:30am`, and the meridian on both ends only when they differ: `11:30am-1:00pm`.
 - **A marker crosses today's column at the time of the render**, from `trmnl.system.timestamp_utc` and the user's `utc_offset`. The device refreshes every 15 minutes, so it is never further off than that.
+- **Events that start at the same instant share the column side by side.** Each sibling gets an equal slot of the width left after the indent, the last one to the column's edge, and none of them nests under another. An event that starts later, inside a running one, still nests and indents as before.
+- **The agenda splits into two columns on a wide panel** (full and half-horizontal), balanced by count, with a month header repeated at the top of a column it continues into. A second event on the same day leaves its date cell blank so the day reads as one group.
 - **Light fills get a black hairline, dark fills a white one.** The black edge keeps a pale block crisp against the white column and against a sibling in the same tile; the white edge is what separates two nested black blocks.
 
 ## Gotchas

@@ -38,6 +38,10 @@ only in these fields.
 
 ## Render
 
+- A panel 700px or wider (full, half-horizontal) lists in two columns
+  balanced by count; the second column repeats the header of a month it
+  continues. Narrow panels use one column.
+- A second event on the same day leaves its date cell blank.
 - Rows are one line each: `[swatch] Sat 10/17  7:00pm  Title · Location`.
   The date column is 9 characters, the time column 7. Location follows
   the title after a middle dot and only in the full layout, cut at its
