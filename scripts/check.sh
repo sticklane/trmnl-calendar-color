@@ -97,9 +97,20 @@ python3 scripts/geometry_check.py || exit 1
 # which align-self:flex-start on .cg-wrap guarantees.
 cp .trmnlp.yml "$fixture_backup"
 trap 'cp "$fixture_backup" .trmnlp.yml; rm -f "$fixture_backup"' EXIT
-# Written through the existing inode (see the days build below).
-sed 's/axis_mode: fit/axis_mode: day/' "$fixture_backup" > .trmnlp.yml
-./bin/trmnlp build >/dev/null
+# A fixture variant is written through the existing inode, then settled
+# for a second before the container reads it: a fresh inode, or a read
+# that follows the write too closely, has made the Docker bind mount miss
+# the file. The build's output is shown only when it fails.
+build_variant() {
+    sed "$@" "$fixture_backup" > .trmnlp.yml
+    sync; sleep 1
+    local log; log="$(mktemp -t trmnlp-build)"
+    if ! ./bin/trmnlp build > "$log" 2>&1; then
+        echo "FAIL: trmnlp build failed for fixture variant: $*"; cat "$log"; rm -f "$log"; exit 1
+    fi
+    rm -f "$log"
+}
+build_variant 's/axis_mode: fit/axis_mode: day/'
 for layout in full half_horizontal half_vertical quadrant; do
     out="_build/${layout}.html"
     grep -q 'data-axis-start="0" data-axis-end="24"' "$out" || {
@@ -111,10 +122,7 @@ python3 scripts/geometry_check.py || exit 1
 
 # Single-day mode: `days: 1` overrides the layout's day count, so every
 # layout draws exactly one column and it takes the whole usable width.
-# Written through the existing inode: a cp followed by sed -i replaces the
-# file twice and the Docker bind mount can miss the second one.
-sed 's/days: auto/days: 1/' "$fixture_backup" > .trmnlp.yml
-./bin/trmnlp build >/dev/null
+build_variant 's/days: auto/days: 1/'
 for layout in full half_horizontal half_vertical quadrant; do
     out="_build/${layout}.html"
     [ "$(grep -c 'class="cg-col"' "$out")" -eq 1 ] || {
@@ -125,9 +133,19 @@ for layout in full half_horizontal half_vertical quadrant; do
 done
 python3 scripts/geometry_check.py || exit 1
 
+# 1-bit device: the device id is in bw_devices, so cal_map_bw applies and
+# no hue token reaches the markup. Greys are allowed here and only here.
+build_variant 's/bw_devices: .*/bw_devices: ABC123/'   # trmnlp's fake friendly_id
+for layout in full half_horizontal half_vertical quadrant; do
+    out="_build/${layout}.html"
+    if grep -qE 'bg--(red|yellow|orange|pink)' "$out"; then
+        echo "FAIL: $out uses a hue token on a 1-bit device"; exit 1; fi
+    grep -q 'bg--gray-' "$out" || { echo "FAIL: $out did not apply the 1-bit map"; exit 1; }
+done
+python3 scripts/geometry_check.py || exit 1
+
 # Agenda view: one-off events from the named calendar, by month.
-sed -e 's/mode: grid/mode: agenda/' -e "s/agenda_calendars: ''/agenda_calendars: fun@example.com/" "$fixture_backup" > .trmnlp.yml
-./bin/trmnlp build >/dev/null
+build_variant -e 's/mode: grid/mode: agenda/' -e "s/agenda_calendars: ''/agenda_calendars: fun@example.com/"
 python3 scripts/agenda_check.py || exit 1
 
 cp "$fixture_backup" .trmnlp.yml

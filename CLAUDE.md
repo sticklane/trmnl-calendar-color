@@ -42,6 +42,11 @@ hues, opacity — is dithered into speckle on the OG B/W/R/Y panel and
 reads as fuzz. `check.sh` greps for greys, `rgba(`, `opacity:` and
 fractional pixel offsets and fails on any of them.
 
+On a 1-bit device (`bw_devices`) the render takes `cal_map_bw`, greys
+only: `gray-10`..`gray-35` carry black text, `gray-40` and darker white.
+`check.sh` builds the fixture once as a 1-bit device and refuses any hue
+token there; the colour build still refuses any grey.
+
 Blends are allowed as event fills: `orange` (a red-and-yellow tile),
 `pink` (a red-and-white tile), and the `-45`..`-75` tints of red, yellow,
 orange and pink (the hue's dots on a white ground). All of those are

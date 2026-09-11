@@ -11,7 +11,27 @@
   yellow are solid inks - everything else dithers into speckle.
 {%- endcomment -%}
 {%- assign CF = trmnl.plugin_settings.custom_fields_values -%}
+{%- comment -%}
+  A 1-bit device turns every hue into a grey dither (yellow-60 is a 70%
+  black one), so the devices listed in `bw_devices` take `cal_map_bw`
+  instead of `cal_map`. trmnl.device.friendly_id names the device the
+  screen is rendered for; trmnlp fakes it as ABC123.
+{%- endcomment -%}
+{%- assign DEVICE_ID = trmnl.device.friendly_id | default: "" | strip -%}
+{%- assign BW_RAW = CF.bw_devices | default: bw_devices | default: "" | strip | replace: ",", "
+" -%}
+{%- assign IS_BW = false -%}
+{%- if DEVICE_ID != "" -%}
+  {%- assign bw_list = BW_RAW | split: "
+" -%}
+  {%- for b in bw_list -%}{%- assign b_s = b | strip -%}{%- if b_s == DEVICE_ID -%}{%- assign IS_BW = true -%}{%- break -%}{%- endif -%}{%- endfor -%}
+{%- endif -%}
 {%- assign CAL_MAP_RAW = CF.cal_map | default: cal_map | default: "" | strip -%}
+{%- assign BW_MAP_RAW = CF.cal_map_bw | default: cal_map_bw | default: "" | strip -%}
+{%- assign BW_AUTO = false -%}
+{%- if IS_BW -%}
+  {%- if BW_MAP_RAW != "" -%}{%- assign CAL_MAP_RAW = BW_MAP_RAW -%}{%- else -%}{%- assign BW_AUTO = true -%}{%- endif -%}
+{%- endif -%}
 {%- if CAL_MAP_RAW == "" -%}{%- assign CAL_MAP_RAW = CAL_MAP_DEFAULT -%}{%- endif -%}
 {%- assign CAL_MAP_RAW = CAL_MAP_RAW | replace: ",", "
 " -%}
@@ -19,6 +39,7 @@
 " -%}
 {%- assign DEFAULT_COLOR = CF.default_color | default: default_color | default: "" | strip -%}
 {%- if DEFAULT_COLOR == "" -%}{%- assign DEFAULT_COLOR = DEFAULT_COLOR_FALLBACK -%}{%- endif -%}
+{%- if IS_BW and DEFAULT_COLOR != "white" -%}{%- assign DEFAULT_COLOR = "black" -%}{%- endif -%}
 {%- assign AXIS_MODE = CF.axis_mode | default: axis_mode | default: "" | strip -%}
 {%- if AXIS_MODE != "day" and AXIS_MODE != "fit" -%}{%- assign AXIS_MODE = AXIS_MODE_FALLBACK -%}{%- endif -%}
 {%- comment -%} `days` = 1 is the single-day mode: one column, the layout's full width, the same hour axis. {%- endcomment -%}
@@ -64,6 +85,16 @@
     {%- endif -%}
   {%- endfor -%}
   {%- if t == "" -%}{%- assign t = DEFAULT_COLOR -%}{%- endif -%}
+  {%- comment -%} no 1-bit map given: fold each hue onto a grey that keeps its text readable {%- endcomment -%}
+  {%- if BW_AUTO -%}
+    {%- assign hue = t | split: "-" | first -%}
+    {%- case hue -%}
+      {%- when "yellow" -%}{%- assign t = "white" -%}
+      {%- when "red" -%}{%- assign t = "gray-65" -%}
+      {%- when "orange" -%}{%- assign t = "gray-30" -%}
+      {%- when "pink" -%}{%- assign t = "gray-25" -%}
+    {%- endcase -%}
+  {%- endif -%}
   {%- if lab == "" -%}{%- assign lab = names[c] | default: c | split: "@" | first -%}{%- endif -%}
   {%- assign tokens_s = tokens_s | append: t | append: "," -%}
   {%- assign labels_s = labels_s | append: lab | append: "," -%}
@@ -309,7 +340,7 @@
 
 <div class="view view--{{ VIEW }}">
   <div class="layout">
-    <div class="cg-wrap" data-grid-h="{{ GRID_H }}" data-hour-h="{{ HOUR_H }}" data-axis-mode="{{ AXIS_MODE }}" data-axis-start="{{ GRID_START_H }}" data-axis-end="{{ GRID_END_H }}" data-title-chars="{{ TITLE_CHARS }}" data-panel-h="{{ PANEL_H }}" data-panel-w="{{ PANEL_W }}" data-content-w="{{ COL_W | times: NUM_DAYS | plus: AXIS_W }}" data-line-h="{{ LINE_H }}" data-tight-line-h="{{ TIGHT_LINE_H }}" data-indent-w="{{ INDENT_W }}" data-max-depth="{{ MAX_DEPTH }}" data-total-h="{{ HEAD_H | plus: AD_H | plus: GRID_H | plus: LEGEND_H }}" style="--cg-axis-w:{{ AXIS_W }}px;--cg-col-w:{{ COL_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px;--cg-legend-h:{{ LEGEND_H }}px">
+    <div class="cg-wrap" data-device="{{ DEVICE_ID }}" data-bw="{{ IS_BW }}" data-grid-h="{{ GRID_H }}" data-hour-h="{{ HOUR_H }}" data-axis-mode="{{ AXIS_MODE }}" data-axis-start="{{ GRID_START_H }}" data-axis-end="{{ GRID_END_H }}" data-title-chars="{{ TITLE_CHARS }}" data-panel-h="{{ PANEL_H }}" data-panel-w="{{ PANEL_W }}" data-content-w="{{ COL_W | times: NUM_DAYS | plus: AXIS_W }}" data-line-h="{{ LINE_H }}" data-tight-line-h="{{ TIGHT_LINE_H }}" data-indent-w="{{ INDENT_W }}" data-max-depth="{{ MAX_DEPTH }}" data-total-h="{{ HEAD_H | plus: AD_H | plus: GRID_H | plus: LEGEND_H }}" style="--cg-axis-w:{{ AXIS_W }}px;--cg-col-w:{{ COL_W }}px;--cg-grid-h:{{ GRID_H }}px;--cg-hour-h:{{ HOUR_H }}px;--cg-line-h:{{ LINE_H }}px;--cg-legend-h:{{ LEGEND_H }}px">
 
       {%- comment -%} ---------- day header row ---------- {%- endcomment -%}
       <div class="cg-row cg-row--head">
