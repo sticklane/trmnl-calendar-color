@@ -83,12 +83,14 @@ for f in sorted((ROOT / '_build').glob('*.html')):
             fail.append(f'{name}: row from another calendar {cal!r}')
         if m != anchor.strftime('%Y-%m'):
             fail.append(f'{name}: {ev["summary"]!r} placed under {m}, want {anchor:%Y-%m}')
-        if not flat(text).startswith(ev['summary'][:12]):
+        if not flat(text).startswith(ev['summary'][:12]) and not ev['summary'].startswith(flat(text).rstrip('.')):
             fail.append(f'{name}: row {flat(text)!r} is not {ev["summary"]!r} (order?)')
     if len(rows) + more != len(WANT):
         fail.append(f'{name}: {len(rows)} rows + {more} more != {len(WANT)} wanted events')
-    if name == 'full.html' and not any('Concert at the Vic · The Vic' in t and 'Sheffield' not in t for t in texts):
+    if name == 'full.html' and not any(t == 'Concert at the Vic · The Vic' for t in texts):
         fail.append(f'{name}: the venue should be the location up to its first comma')
+    if name == 'full.html' and not any(t.startswith('Comedy show with a very') and 'Zanies' not in t for t in texts):
+        fail.append(f'{name}: a title that fills the cell must keep its words and drop the venue')
     for bad in ('Past show', 'Dentist', 'Standup', 'Busy'):
         if any(bad in t for t in texts):
             fail.append(f'{name}: {bad!r} must not be listed')

@@ -285,7 +285,7 @@ variables:
         end_full: '2026-09-01T22:00:00-05:00'
       - summary: Concert at the Vic
         description: ''
-        location: The Vic Theatre, 3145 N Sheffield Ave, Chicago
+        location: The Vic, 3145 N Sheffield Ave, Chicago
         calname: fun@example.com
         all_day: false
         start: 7:00 PM
@@ -309,8 +309,9 @@ variables:
         end: ''
         start_full: '2026-10-15'
         end_full: '2026-10-19'
-      - summary: Comedy show
+      - summary: Comedy show with a very long headline act name
         description: ''
+        location: Zanies Chicago, 1548 N Wells St
         calname: fun@example.com
         all_day: false
         start: 8:00 PM
