@@ -759,9 +759,9 @@
                 {%- assign ob_cbot = ob_p[0] | plus: 0 -%}
                 {%- assign ob_bottom = ob_p[1] | plus: 0 -%}
                 {%- assign ob_tb = ob_p[2] | plus: 0 -%}
-                {%- assign ob_ctop = ob_p[3] | plus: 0 -%}
-                {%- comment -%} a sibling sits beside this block, not above it {%- endcomment -%}
-                {%- if ob_ctop == ctop -%}{%- continue -%}{%- endif -%}
+                {%- assign ob_s1 = ob_p[3] | plus: 0 -%}
+                {%- comment -%} a sibling (same start minute) sits beside this block, not above it {%- endcomment -%}
+                {%- if ob_s1 == s1 -%}{%- continue -%}{%- endif -%}
                 {%- if ob_cbot > ctop -%}{%- assign depth = depth | plus: 1 -%}{%- endif -%}
                 {%- if ob_bottom > ctop and ob_tb > floor -%}{%- assign floor = ob_tb -%}{%- endif -%}
               {%- endfor -%}
@@ -851,7 +851,7 @@
               {%- assign bottom = top | plus: hgt -%}
               {%- if bottom > GRID_H -%}{%- assign more = more | plus: 1 -%}{%- continue -%}{%- endif -%}
               {%- assign text_bottom = top | plus: text_h -%}
-              {%- assign stack = stack | append: cbot | append: ":" | append: bottom | append: ":" | append: text_bottom | append: ":" | append: ctop | append: "," -%}
+              {%- assign stack = stack | append: cbot | append: ":" | append: bottom | append: ":" | append: text_bottom | append: ":" | append: s1 | append: "," -%}
 
               {%- assign token = CAL_TOKENS[ci] -%}
               {%- assign txt = CAL_TEXTS[ci] -%}

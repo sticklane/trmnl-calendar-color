@@ -148,7 +148,7 @@ for f in sorted((ROOT / '_build').glob('*.html')):
         fail.append(f'{name}: no grid columns')
     for chunk in cols:
         day = chunk.split('"', 1)[0]
-        placed = []   # (top, bottom, text_bottom, clock_bottom, clock_top, x0, x1) per block drawn so far
+        placed = []   # (top, bottom, text_bottom, clock_bottom, start_minute, x0, x1) per block drawn so far
         for geom, slot, clock, tc, form, dtimes, dtitle, inner in BLOCK.findall(chunk):
             top, hgt, left, lines, line_h = (int(x) for x in geom.split(','))
             gi, k, x0, x1 = (int(x) for x in slot.split(','))
@@ -209,9 +209,10 @@ for f in sorted((ROOT / '_build').glob('*.html')):
                     fail.append(f'{name} {day}: {want!r} claims clock {ctop}-{cbot}px, '
                                 f'the fixture says {clock_px(s)}-{clock_px(e)}px')
 
-            # Siblings (same clock top) share the column: slot gi of k,
+            # Siblings (same start minute) share the column: slot gi of k,
             # each (col_w - indent) // k wide, the last one to the edge.
-            sib = [p for p in placed if p[4] == ctop]
+            s_min = minutes(ev['start_full']) if ev else -1
+            sib = [p for p in placed if p[4] == s_min]
             if len(sib) != gi:
                 fail.append(f'{name} {day}: {want!r} claims slot {gi} but {len(sib)} siblings were drawn before it')
             slot_w = (col_w - left) // k
@@ -221,7 +222,7 @@ for f in sorted((ROOT / '_build').glob('*.html')):
                 fail.append(f'{name} {day}: {want!r} spans x {x0}-{x1}, want {want_x0}-{want_x1} (slot {gi} of {k})')
             # Native placement: the block sits at its clock top and spans
             # its whole duration ...
-            depth = sum(1 for _, _, _, cb, ct, _, _ in placed if cb > ctop and ct != ctop)
+            depth = sum(1 for _, _, _, cb, sm, _, _ in placed if cb > ctop and sm != s_min)
             if top < ctop:
                 fail.append(f'{name} {day}: {want!r} drawn at {top}px, above its clock top {ctop}px')
             if bottom < cbot:
@@ -234,7 +235,7 @@ for f in sorted((ROOT / '_build').glob('*.html')):
                 fail.append(f'{name} {day}: {want!r} nests {depth} deep but is indented '
                             f'{left}px, want {want_left}px')
             # ... and moves down ONLY to clear text it would have covered, never further.
-            floor = max((tb for _, b, tb, _, ct, _, _ in placed if b > ctop and ct != ctop), default=0)
+            floor = max((tb for _, b, tb, _, sm, _, _ in placed if b > ctop and sm != s_min), default=0)
             if top != max(ctop, floor):
                 fail.append(f'{name} {day}: {want!r} drawn at {top}px; clock top {ctop}px, '
                             f'parent text ends {floor}px')
@@ -242,7 +243,7 @@ for f in sorted((ROOT / '_build').glob('*.html')):
                 if top < tb and bottom > t and x0 < px1 and x1 > px0:
                     fail.append(f'{name} {day}: {want!r} ({top}-{bottom}) covers the text of the '
                                 f'block at {t}-{tb}')
-            placed.append((top, bottom, top + text_h, cbot, ctop, x0, x1))
+            placed.append((top, bottom, top + text_h, cbot, s_min, x0, x1))
         for n in re.findall(r'data-more="(\d+)"', chunk):
             more_total += int(n)
 
