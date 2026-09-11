@@ -16,9 +16,14 @@ Merge. That plugin fetches `days_ahead` from today, set by its layout
 `month` and `rolling_month`, 14 for `schedule`, 7 for the rest, 1 for
 `today_only`. So the native instance must run the `month` layout, and
 the horizon is six weeks. Nothing on TRMNL fetches further: the iCal
-plugins' widest layout is "this calendar month". A longer horizon needs
+plugins' widest layout is "this calendar month". A longer horizon would need
 a polling source that serves the same event shape from the calendar's
-private iCal address; that is a later phase and is not built here.
+iCal address, which means hosting something. The decision on
+2026-09-11 that the native limit is acceptable, so the agenda stays a
+merge plugin with a six-week horizon and nothing is hosted. (TRMNL's
+polling strategy accepts plaintext, but a probe plugin polling a public
+iCal feed exposed the body to Liquid under no discoverable name, so
+parsing iCal in the template is not a path either.)
 
 The one-off calendar is a Google calendar the user keeps for these
 events only, ticked in the native instance's calendar list. The agenda
