@@ -38,9 +38,9 @@ variables:
   cal_map_bw: |
     you@gmail.com=black Personal
     work@example.com=white Work
-    shared@group.calendar.google.com=gray-30 Family
+    shared@group.calendar.google.com=gray-20 Family
     corp@example.com=white
-    fun@example.com=gray-65 Fun
+    fun@example.com=gray-75 Fun
   google_calendar_12345:
     instance_name: Calendar
     today_in_tz: '2026-09-07T00:00:00.000-05:00'

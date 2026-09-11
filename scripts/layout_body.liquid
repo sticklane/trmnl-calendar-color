@@ -332,7 +332,8 @@
   }
   /* Day headers in bold, like the block text they sit over. */
   .cg-row--head .label { font-weight: bold; }
-  .cg-swatch { display: inline-block; width: 8px; height: 8px; }
+  /* A hairline on the swatch, so a white calendar still shows one. */
+  .cg-swatch { display: inline-block; width: 8px; height: 8px; border: 1px solid #000; box-sizing: border-box; }
   .cg-legend { align-items: center; height: var(--cg-legend-h); }
   /* The window-end label, pulled back inside the grid by one line. */
   .cg-hour--end { position: relative; top: calc(0px - var(--cg-line-h)); height: 0; }
