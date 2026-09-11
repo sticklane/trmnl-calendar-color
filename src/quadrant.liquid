@@ -207,7 +207,7 @@
   {%- assign i = forloop.index0 -%}
   {%- assign btxt = BW_TEXTS[i] -%}
   {%- if btxt == "black" -%}{%- assign bline = "#000" -%}{%- else -%}{%- assign bline = "#fff" -%}{%- endif -%}
-  .trmnl :is(.screen--1bit,.screen--2bit) .cg-cal-{{ i }}{--tn-bg-color:var(--bg-{{ bt }}-color);--tn-bg-image:var(--bg-{{ bt }}-image,none);border-color:{{ bline }}}
+  .trmnl :is(.screen--1bit,.screen--2bit) .cg-cal-{{ i }}{--tn-bg-color:var(--bg-{{ bt }}-color);--tn-bg-image:var(--bg-{{ bt }}-image,none);background:var(--bg-{{ bt }}-color) var(--bg-{{ bt }}-image,none);border-color:{{ bline }}}
   .trmnl :is(.screen--1bit,.screen--2bit) .cg-cal-{{ i }} :is(.cg-line,.ag-line){--tn-text-color:var(--text-{{ btxt }}-color);--tn-text-image:var(--text-{{ btxt }}-image,none);color:{{ bline }}}
 {%- endfor -%}
 {%- endcapture -%}

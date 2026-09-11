@@ -138,6 +138,7 @@ python3 scripts/geometry_check.py || exit 1
 for layout in full half_horizontal half_vertical quadrant; do
     out="_build/${layout}.html"
     grep -q 'screen--1bit,.screen--2bit) .cg-cal-0{--tn-bg-color:var(--bg-' "$out" || { echo "FAIL: $out has no 1-bit grey rules"; exit 1; }
+    grep -q 'cg-cal-0{[^}]*background:var(--bg-' "$out" || { echo "FAIL: $out 1-bit rules do not paint the fill"; exit 1; }
     if grep -oE 'screen--2bit\) \.cg-cal-[0-9]+\{--tn-bg-color:var\(--bg-[a-z0-9-]+' "$out" | grep -qE 'bg-(red|yellow|orange|pink)'; then
         echo "FAIL: $out maps a calendar to a hue on a 1-bit screen"; exit 1; fi
     grep -q 'cg-cal-[0-9]*{--tn-bg-color:var(--bg-gray-' "$out" || { echo "FAIL: $out 1-bit map has no grey"; exit 1; }
