@@ -88,8 +88,10 @@
           {%- assign time_txt = sp[0] | append: sp[1] | downcase -%}
         {%- endif -%}
         {%- assign text = ev.summary -%}
+        {%- comment -%} Google sends the whole postal address; the venue is the part before the first comma {%- endcomment -%}
         {%- if VIEW == "full" and ev.location != blank -%}
-          {%- assign text = text | append: " · " | append: ev.location -%}
+          {%- assign venue = ev.location | split: "," | first | strip -%}
+          {%- assign text = text | append: " · " | append: venue -%}
         {%- endif -%}
         {%- assign text = text | truncate: AG_TITLE_CHARS -%}
 

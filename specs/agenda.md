@@ -40,7 +40,9 @@ only in these fields.
 
 - Rows are one line each: `[swatch] Sat 10/17  7:00pm  Title · Location`.
   The date column is 9 characters, the time column 7. Location follows
-  the title after a middle dot and only in the full layout. The line is
+  the title after a middle dot and only in the full layout, cut at its
+  first comma: Google sends the whole postal address and the venue is
+  the part before it. The line is
   cut with an ellipsis, never wrapped.
 - A month header is a black bar with the month name in white, `October
   2026`. It is emitted the first time an event of that month is placed.

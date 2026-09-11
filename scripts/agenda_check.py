@@ -74,6 +74,8 @@ for f in sorted((ROOT / '_build').glob('*.html')):
             fail.append(f'{name}: row {flat(text)!r} is not {ev["summary"]!r} (order?)')
     if len(rows) + more != len(WANT):
         fail.append(f'{name}: {len(rows)} rows + {more} more != {len(WANT)} wanted events')
+    if name == 'full.html' and not any('Concert at the Vic · The Vic Theatre' in t and 'Sheffield' not in t for t in texts):
+        fail.append(f'{name}: the venue should be the location up to its first comma')
     for bad in ('Past show', 'Dentist', 'Standup', 'Busy'):
         if any(bad in t for t in texts):
             fail.append(f'{name}: {bad!r} must not be listed')

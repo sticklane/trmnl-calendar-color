@@ -285,7 +285,7 @@ variables:
         end_full: '2026-09-01T22:00:00-05:00'
       - summary: Concert at the Vic
         description: ''
-        location: The Vic Theatre
+        location: The Vic Theatre, 3145 N Sheffield Ave, Chicago
         calname: fun@example.com
         all_day: false
         start: 7:00 PM
