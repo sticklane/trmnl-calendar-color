@@ -1,0 +1,131 @@
+{%- comment -%}
+  ---------------- agenda view ----------------
+  One-off events from the agenda calendars, one line each, grouped under
+  month headers, as far ahead as the source reaches. Rows and headers are
+  placed top-down against the usable height less one footer line; what
+  does not fit is counted into "+N more". Black and white only, plus the
+  calendar's own token on the swatch, so it reads on a 1-bit panel too.
+{%- endcomment -%}
+{%- assign AG_RAW = CF.agenda_calendars | default: agenda_calendars | default: "" | strip | replace: ",", "
+" -%}
+{%- assign AG_LIST = AG_RAW | split: "
+" -%}
+{%- comment -%} a tall panel can afford a looser pitch; a short one packs its rows {%- endcomment -%}
+{%- if PANEL_H > 300 -%}{%- assign AG_ROW_H = LINE_H | plus: 6 -%}{%- else -%}{%- assign AG_ROW_H = LINE_H | plus: 2 -%}{%- endif -%}
+{%- assign AG_HEAD_H = LINE_H | plus: 4 -%}
+{%- assign AG_BUDGET = PANEL_H | minus: AG_ROW_H -%}
+{%- assign AG_DATE_CHARS = 11 -%}   {%- comment -%} "10/15-10/18", the widest a span gets {%- endcomment -%}
+{%- assign AG_TIME_CHARS = 7 -%}
+{%- assign AG_ROW_CHARS = PANEL_W | times: 100 | divided_by: CHAR_W100 | minus: 3 -%}
+{%- assign AG_TITLE_CHARS = AG_ROW_CHARS | minus: AG_DATE_CHARS | minus: AG_TIME_CHARS | minus: 4 -%}
+{%- assign HORIZON_LAST = today_ts | plus: 3542400 | date: "%b %-d" -%}
+{%- assign today_md = today_ts | date: "%-m/%-d" -%}
+
+<style>
+  .ag-wrap { display: flex; flex-direction: column; width: 100%; align-self: flex-start; overflow: hidden; }
+  .ag-month { display: flex; align-items: center; height: {{ AG_HEAD_H }}px; }
+  .ag-row { display: flex; align-items: center; height: {{ AG_ROW_H }}px; white-space: nowrap; overflow: hidden; }
+  .ag-date { flex: 0 0 {{ AG_DATE_CHARS | times: CHAR_W100 | divided_by: 100 | plus: 4 }}px; }
+  .ag-time { flex: 0 0 {{ AG_TIME_CHARS | times: CHAR_W100 | divided_by: 100 | plus: 4 }}px; }
+  .ag-text { flex: 1 1 auto; min-width: 0; }
+  /* No flex-distribution keyword here: trmnlp's lint counts its name.
+     The first span grows, which pushes the "+N more" to the right edge. */
+  .ag-foot { display: flex; align-items: center; height: {{ AG_ROW_H }}px; border-top: 1px dotted currentColor; }
+  .ag-foot > :first-child { flex: 1 1 auto; }
+  .ag-swatch { display: inline-block; width: 8px; height: 8px; flex: 0 0 8px; }
+  .ag-line { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; line-height: var(--cg-line-h); --ui-scale: 0; }
+</style>
+
+<div class="view view--{{ VIEW }}">
+  <div class="layout">
+    <div class="ag-wrap px--1" data-ag-chars="{{ AG_ROW_CHARS }}" data-ag-budget="{{ AG_BUDGET }}" style="--cg-line-h:{{ LINE_H }}px">
+      {%- assign y = 0 -%}
+      {%- assign cur_month = "" -%}
+      {%- assign shown = 0 -%}
+      {%- assign more = 0 -%}
+      {%- assign full = false -%}
+      {%- for ev in events -%}
+        {%- assign ci = 0 -%}
+        {%- for c in cals -%}{%- if c == ev.calname -%}{%- assign ci = forloop.index0 -%}{%- break -%}{%- endif -%}{%- endfor -%}
+        {%- comment -%} the calendar filter: the named ones, or every calendar that is not quiet {%- endcomment -%}
+        {%- assign keep = false -%}
+        {%- if AG_RAW == "" -%}
+          {%- if CAL_QUIET[ci] != "true" -%}{%- assign keep = true -%}{%- endif -%}
+        {%- else -%}
+          {%- for a in AG_LIST -%}{%- assign a_s = a | strip -%}{%- if a_s == ev.calname -%}{%- assign keep = true -%}{%- break -%}{%- endif -%}{%- endfor -%}
+        {%- endif -%}
+        {%- unless keep -%}{%- continue -%}{%- endunless -%}
+
+        {%- assign start_d = ev.start_full | split: "T" | first -%}
+        {%- assign end_d = ev.end_full | split: "T" | first -%}
+        {%- assign last_d = start_d -%}
+        {%- if ev.all_day and end_d != blank and end_d > start_d -%}
+          {%- assign last_d = end_d | date: "%s" | minus: 86400 | date: "%Y-%m-%d" -%}
+        {%- endif -%}
+        {%- if ev.all_day -%}
+          {%- if last_d < today -%}{%- continue -%}{%- endif -%}
+        {%- elsif start_d < today -%}
+          {%- continue -%}
+        {%- endif -%}
+        {%- assign anchor_d = start_d -%}
+        {%- if anchor_d < today -%}{%- assign anchor_d = today -%}{%- endif -%}
+        {%- assign month_key = anchor_d | slice: 0, 7 -%}
+
+        {%- comment -%} the row's three cells {%- endcomment -%}
+        {%- if last_d > start_d -%}
+          {%- assign d_from = start_d | date: "%-m/%-d" -%}
+          {%- if start_d < today -%}{%- assign d_from = "now" -%}{%- endif -%}
+          {%- assign date_txt = last_d | date: "%-m/%-d" | prepend: "-" | prepend: d_from -%}
+        {%- elsif start_d == today -%}
+          {%- assign date_txt = "Today" -%}
+        {%- else -%}
+          {%- assign date_txt = start_d | date: "%a %-m/%-d" -%}
+        {%- endif -%}
+        {%- if ev.all_day -%}
+          {%- assign time_txt = "" -%}
+        {%- else -%}
+          {%- assign sp = ev.start | split: " " -%}
+          {%- assign time_txt = sp[0] | append: sp[1] | downcase -%}
+        {%- endif -%}
+        {%- assign text = ev.summary -%}
+        {%- if VIEW == "full" and ev.location != blank -%}
+          {%- assign text = text | append: " · " | append: ev.location -%}
+        {%- endif -%}
+        {%- assign text = text | truncate: AG_TITLE_CHARS -%}
+
+        {%- comment -%} budget: a header needs its own line and the first row under it {%- endcomment -%}
+        {%- assign need = AG_ROW_H -%}
+        {%- if month_key != cur_month -%}{%- assign need = need | plus: AG_HEAD_H -%}{%- endif -%}
+        {%- assign after = y | plus: need -%}
+        {%- if full or after > AG_BUDGET -%}
+          {%- assign full = true -%}
+          {%- assign more = more | plus: 1 -%}
+          {%- continue -%}
+        {%- endif -%}
+        {%- if month_key != cur_month -%}
+          {%- assign cur_month = month_key -%}
+          <div class="ag-month bg--black px--1" data-month="{{ month_key }}">
+            <span class="label label--small ag-line text--white">{{ anchor_d | date: "%B %Y" }}</span>
+          </div>
+        {%- endif -%}
+        <div class="ag-row" data-month="{{ month_key }}" data-date="{{ date_txt }}" data-cal="{{ ev.calname }}" data-text="{{ text | escape }}">
+          <span class="ag-swatch bg--{{ CAL_TOKENS[ci] }}"></span>
+          <span class="ag-date px--1"><span class="label label--small ag-line">{{ date_txt }}</span></span>
+          <span class="ag-time"><span class="label label--small ag-line">{{ time_txt }}</span></span>
+          <span class="ag-text"><span class="label label--small ag-line">{{ text }}</span></span>
+        </div>
+        {%- assign y = after -%}
+        {%- assign shown = shown | plus: 1 -%}
+      {%- endfor -%}
+      {%- if shown == 0 -%}
+        <div class="ag-row" data-empty="true">
+          <span class="ag-text"><span class="label label--small ag-line">Nothing out of the routine through {{ HORIZON_LAST }}</span></span>
+        </div>
+      {%- endif -%}
+      <div class="ag-foot">
+        <span class="label label--small ag-line">through {{ HORIZON_LAST }}</span>
+        {%- if more > 0 -%}<span class="label label--small ag-line" data-more="{{ more }}">+{{ more }} more</span>{%- endif -%}
+      </div>
+    </div>
+  </div>
+</div>

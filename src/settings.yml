@@ -66,3 +66,23 @@ custom_fields:
       - auto
       - "1"
     optional: true
+  - keyname: mode
+    field_type: select
+    name: View
+    description: >-
+      "grid" is the day grid. "agenda" lists upcoming one-off events by
+      month from the calendars named below, as far ahead as the native
+      calendar instance fetches (its "month" layout reaches 42 days).
+    options:
+      - grid
+      - agenda
+    optional: true
+  - keyname: agenda_calendars
+    field_type: text
+    name: Agenda calendars
+    description: >-
+      Calendar ids to list in the agenda view, one per line. Leave empty
+      to list every calendar that is not a quiet one.
+    placeholder: |
+      fun@group.calendar.google.com
+    optional: true

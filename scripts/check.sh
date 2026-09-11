@@ -125,9 +125,14 @@ for layout in full half_horizontal half_vertical quadrant; do
 done
 python3 scripts/geometry_check.py || exit 1
 
+# Agenda view: one-off events from the named calendar, by month.
+sed -e 's/mode: grid/mode: agenda/' -e "s/agenda_calendars: ''/agenda_calendars: fun@example.com/" "$fixture_backup" > .trmnlp.yml
+./bin/trmnlp build >/dev/null
+python3 scripts/agenda_check.py || exit 1
+
 cp "$fixture_backup" .trmnlp.yml
 rm -f "$fixture_backup"
 trap - EXIT
 ./bin/trmnlp build >/dev/null
 
-echo "OK: lint clean; both axis modes and the single-day mode rendered from the .trmnlp.yml fixture"
+echo "OK: lint clean; both axis modes, the single-day mode and the agenda view rendered from the .trmnlp.yml fixture"

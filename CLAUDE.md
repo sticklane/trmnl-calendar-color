@@ -10,6 +10,15 @@ run `python3 scripts/gen_layouts.py`, commit the regenerated files.
 `scripts/check.sh` runs `gen_layouts.py --check` first and fails if the
 tree disagrees.
 
+## Two views, one body
+
+`scripts/agenda_body.liquid` is the agenda render. `gen_layouts.py`
+splits `layout_body.liquid` at its first `<style>` and emits the derived
+section, then `{% if MODE == "agenda" %}` agenda `{% else %}` grid.
+Anything both views need (colours, labels, quiet calendars, `today`)
+belongs above that `<style>`; `scripts/agenda_check.py` is the agenda's
+gate and `specs/agenda.md` its spec.
+
 ## Never commit real calendar ids
 
 The fixture and the fallbacks ship placeholder addresses

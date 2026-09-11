@@ -86,6 +86,8 @@ Deploy by pasting each `src/*.liquid` into its markup tab, per Setup above.
 | Default color | `default_color` | fill for any calendar the map does not list |
 | Hour axis | `axis_mode` | `fit` (an hour either side of the day's events) or `day` (midnight to midnight) |
 | Days shown | `days` | `auto` (the layout's own span) or `1` (single-day mode: today only, one column across the whole width, same hour axis) |
+| View | `mode` | `grid` (default) or `agenda`: one-off events by month, as far ahead as the native instance fetches. See `specs/agenda.md` |
+| Agenda calendars | `agenda_calendars` | calendar ids, one per line; empty lists every calendar that is not quiet |
 
 They are declared in `src/settings.yml` and edited on usetrmnl.com. The
 values written into the markup are only the empty-field fallback. The

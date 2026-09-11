@@ -8,6 +8,14 @@ the render is written.
 import pathlib, sys
 
 BODY = pathlib.Path(__file__).with_name('layout_body.liquid').read_text()
+AGENDA = pathlib.Path(__file__).with_name('agenda_body.liquid').read_text()
+# The body is the derived section, then the grid render from its <style>.
+# The agenda view shares the derived section and replaces the render.
+_split = BODY.index('\n<style>')
+DERIVED, GRID = BODY[:_split], BODY[_split:]
+BODY = (DERIVED
+        + '\n{%- if MODE == "agenda" -%}\n' + AGENDA
+        + '\n{%- else -%}' + GRID + '\n{%- endif -%}\n')
 
 SHARED = """{%- assign src = google_calendar_12345 -%}
 

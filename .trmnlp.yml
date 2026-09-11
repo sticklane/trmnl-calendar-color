@@ -28,9 +28,12 @@ variables:
     work@example.com=orange
     shared@group.calendar.google.com=pink
     corp@example.com=yellow-60
+    fun@example.com=red Fun
   default_color: white
   axis_mode: fit
   days: auto
+  mode: grid
+  agenda_calendars: ''
   google_calendar_12345:
     instance_name: Calendar
     today_in_tz: '2026-09-07T00:00:00.000-05:00'
@@ -39,6 +42,7 @@ variables:
       work@example.com: Work
       shared@group.calendar.google.com: Family
       corp@example.com: Corp
+      fun@example.com: Fun
     events:
       - summary: Cousin Pam's
         description: ''
@@ -263,3 +267,53 @@ variables:
         end: 7:00 PM
         start_full: '2026-09-07T18:00:00-05:00'
         end_full: '2026-09-07T19:00:00-05:00'
+      - summary: Ongoing trip
+        description: ''
+        calname: fun@example.com
+        all_day: true
+        start: ''
+        end: ''
+        start_full: '2026-09-05'
+        end_full: '2026-09-09'
+      - summary: Past show
+        description: ''
+        calname: fun@example.com
+        all_day: false
+        start: 8:00 PM
+        end: 10:00 PM
+        start_full: '2026-09-01T20:00:00-05:00'
+        end_full: '2026-09-01T22:00:00-05:00'
+      - summary: Concert at the Vic
+        description: ''
+        location: The Vic Theatre
+        calname: fun@example.com
+        all_day: false
+        start: 7:00 PM
+        end: 10:00 PM
+        start_full: '2026-09-20T19:00:00-05:00'
+        end_full: '2026-09-20T22:00:00-05:00'
+      - summary: Foosball open
+        description: ''
+        location: Milwaukee
+        calname: fun@example.com
+        all_day: true
+        start: ''
+        end: ''
+        start_full: '2026-10-10'
+        end_full: '2026-10-11'
+      - summary: Trip to Denver
+        description: ''
+        calname: fun@example.com
+        all_day: true
+        start: ''
+        end: ''
+        start_full: '2026-10-15'
+        end_full: '2026-10-19'
+      - summary: Comedy show
+        description: ''
+        calname: fun@example.com
+        all_day: false
+        start: 8:00 PM
+        end: 9:30 PM
+        start_full: '2026-11-05T20:00:00-06:00'
+        end_full: '2026-11-05T21:30:00-06:00'

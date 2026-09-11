@@ -21,6 +21,9 @@ only render them.
 | `bin/trmnlp` | gem-or-Docker wrapper for the `trmnlp` CLI |
 | `scripts/check.sh` | the canonical check |
 | `scripts/geometry_check.py` | asserts every block sits at its clock position, holds its full text, and covers no other text |
+| `scripts/agenda_body.liquid` | the agenda view's render; the generator splices it in under `mode: agenda` |
+| `scripts/agenda_check.py` | asserts every one-off event is a row under its month or counted into "+N more" |
+| `specs/agenda.md` | the agenda view's spec: data horizon, settings, render rules, checks, deploy |
 | `reference/native-3day/` | what the native render exposes, and the settings it came from |
 
 The framework title bar is gone: it spent ~44px on a name and an icon.
@@ -39,8 +42,9 @@ reaches for utility classes over hand-written spacing.
 `scripts/check.sh` fails if the tree disagrees. Four hand-maintained
 copies is how they drifted.
 
-Colours, the axis mode and the day count are the plugin's own custom
-fields (`cal_map`, `default_color`, `axis_mode`, `days`), declared in `src/settings.yml`
+Colours, the axis mode, the day count and the view are the plugin's own
+custom fields (`cal_map`, `default_color`, `axis_mode`, `days`, `mode`,
+`agenda_calendars`), declared in `src/settings.yml`
 and edited on the plugin's settings page. The values in the markup are
 only the empty-field fallback.
 
