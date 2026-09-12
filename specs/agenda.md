@@ -19,7 +19,7 @@ the horizon is six weeks. Nothing on TRMNL fetches further: the iCal
 plugins' widest layout is "this calendar month". A longer horizon would need
 a polling source that serves the same event shape from the calendar's
 iCal address, which means hosting something. The decision on
-2026-09-11 that the native limit is acceptable, so the agenda stays a
+2026-09-11 was that the native limit is acceptable, so the agenda stays a
 merge plugin with a six-week horizon and nothing is hosted. (TRMNL's
 polling strategy accepts plaintext, but a probe plugin polling a public
 iCal feed exposed the body to Liquid under no discoverable name, so

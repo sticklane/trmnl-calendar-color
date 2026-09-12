@@ -162,13 +162,14 @@ fixture resolves to.
 Working. `scripts/check.sh` is green: lint clean, all four layouts render
 from the fixture.
 
-Live on usetrmnl.com as private plugin <grid-id> (`trmnl-calendar-color`,
-strategy Plugin Merge, `mode: grid`) and private plugin <agenda-id>
-(`trmnl-calendar-agenda`, same markup, `mode: agenda`), both reading
-merge variable `google_calendar_<id>` and on device <device-id>'s playlist,
-with the native instance kept on that playlist but hidden so it keeps
-syncing. The native instance runs the `month` layout since 2026-09-10,
-which is the 42-day window the agenda lists.
+Live on usetrmnl.com as two private plugins built from this one markup
+(strategy Plugin Merge): a grid instance (`mode: grid`) and an agenda
+instance (`mode: agenda`), both reading the native Google Calendar
+instance's merge variable and on both devices' playlists, with the
+native instance kept on a playlist but hidden so it keeps syncing. The
+native instance runs the `month` layout, which is the 42-day window the
+agenda lists. The plugin ids and the merge-variable node name are
+account-specific and live in the untracked `deploy.env`, never here.
 
 Deploying the full layout means pasting `src/full.liquid` into the
 markup editor with the node name and `CAL_MAP` lines kept from the live

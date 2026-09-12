@@ -119,6 +119,28 @@ minutes.
 - **The agenda splits into two columns on a wide panel** (full and half-horizontal), balanced by count, with a month header repeated at the top of a column it continues into. A second event on the same day leaves its date cell blank so the day reads as one group.
 - **Light fills get a black hairline, dark fills a white one.** The black edge keeps a pale block crisp against the white column and against a sibling in the same tile; the white edge is what separates two nested black blocks.
 
+## Deploying to usetrmnl.com
+
+Deploy is an archive upload, the same endpoint the official `trmnlp`
+CLI uses, done by `scripts/deploy.sh` so the server's own settings stay
+the truth (`trmnlp push` would replace them with this repo's placeholder
+`settings.yml`).
+
+1. Copy `deploy.env.example` to `deploy.env` and fill in your plugin ids
+   and your merge-variable node (`google_calendar_<id>` under "Merge
+   Variables" on the plugin page). The file is untracked.
+2. Get an API key from https://trmnl.com/account and export it:
+   `export TRMNL_API_KEY=user_...`. Never write it into the repo.
+3. `scripts/deploy.sh`. It runs `scripts/check.sh`, downloads each
+   plugin's archive, replaces the four layouts with the built ones, and
+   uploads. `--dry-run` builds the archives under `_deploy/` without
+   touching the server; `--skip-check` skips the gate.
+4. Press "Force Refresh" on each plugin's settings page to see the
+   render.
+
+The plugin's own settings (colour maps, view, agenda calendars) are
+edited on the plugin page and are not part of a deploy.
+
 ## Gotchas
 
 - **Only four inks print solid.** On the OG B/W/R/Y panel black, white, red and yellow are inks; every other token — grey steps, other hues, any opacity — is dithered into a speckle that reads as fuzz at 800x480. That is why weekends are marked with a heavier column rule instead of a shaded column, block text is black or white only, and `check.sh` greps the built HTML for greys, `rgba(`, `opacity:` and fractional pixel offsets.
@@ -138,3 +160,16 @@ Plugin Merge lets you reference multiple nodes. Liquid `concat` joins arrays:
 {%- assign events = google_calendar_12345.events | concat: outlook_calendar_67890.events | sort: "date_time" -%}
 ```
 Whether Outlook/iCal events carry a `calname` field: data missing — that plugin's source isn't in the public repo. If they don't, key `CAL_MAP` on whatever distinguishing field they expose, or tag by loop instead of concat.
+
+## Licence and attribution
+
+This repository is MIT licensed; see `LICENSE`.
+
+It is not affiliated with TRMNL. The rendered screens use TRMNL's design
+framework (`plugins.css`, `plugins.js`), which the TRMNL server loads at
+render time; that framework, the TRMNL name, and the Google Calendar
+plugin are TRMNL's own and are not included here. The grid's behaviour
+was reproduced from the native Google Calendar plugin's rendered output,
+not from its source; `reference/native-3day/NOTES.md` records what was
+read off the pixels. The local preview and lint come from the
+`trmnlp` CLI (usetrmnl/trmnlp, MIT), run in its Docker image.

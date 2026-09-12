@@ -3,8 +3,8 @@
 ## The native render is a raster image, not HTML
 
 The instance edit page embeds the render as an
-Active Storage blob (`plugin-<hash>`), 800x480 PNG. `native-3day-800x480.png`
-is that blob. No route on the site serves the render as HTML: `/render`,
+Active Storage blob (`plugin-<hash>`), 800x480 PNG. That blob was kept
+locally as `native-3day-800x480.png` (gitignored: it shows real events). No route on the site serves the render as HTML: `/render`,
 `/preview`, `/render_markup`, `/markup`, `/screens`, `/screen`,
 `/plugins/<id>/render` and `/plugin_settings/<id>.json` all 404, and
 the page's own "Edit Markup" button is a link to
