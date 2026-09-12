@@ -171,11 +171,12 @@ native instance runs the `month` layout, which is the 42-day window the
 agenda lists. The plugin ids and the merge-variable node name are
 account-specific and live in the untracked `deploy.env`, never here.
 
-Deploying the full layout means pasting `src/full.liquid` into the
-markup editor with the node name and `CAL_MAP` lines kept from the live
-copy. The form no-ops unless `data-markup-dirty-value` is `true`, and the
-editor's device dropdown must be set to `TRMNL OG (B/W/R/Y)` for the
-preview to show the colours the device will actually print.
+Deploying is `bin/trmnlp push --id <plugin id>` after
+`NODE=google_calendar_<id> python3 scripts/gen_layouts.py` has written
+the real merge-variable node into `src/`; regenerate with no `NODE`
+afterwards so the tree keeps the placeholder. The editor's device
+dropdown must be set to the target device for the preview to show the
+colours it will print, and the site's "Force Refresh" shows a new push.
 
 There is no CI workflow, on purpose: `scripts/check.sh` needs only Docker
 and runs locally in seconds, and TRMNL's generated workflow would push to

@@ -5,7 +5,13 @@ editing four copies is how they drift. `scripts/check.sh` regenerates and
 fails if the working tree disagrees, so the body below is the only place
 the render is written.
 """
-import pathlib, sys
+import os, pathlib, sys
+
+# The merge-variable node the markup reads. The tree always holds the
+# placeholder; `NODE=google_calendar_<id> python3 scripts/gen_layouts.py`
+# writes the real one for a `trmnlp push`, and `--check` compares against
+# whatever NODE says, so a real node never passes the check unnoticed.
+NODE = os.environ.get('NODE', 'google_calendar_12345')
 
 BODY = pathlib.Path(__file__).with_name('layout_body.liquid').read_text()
 AGENDA = pathlib.Path(__file__).with_name('agenda_body.liquid').read_text()
@@ -17,7 +23,7 @@ BODY = (DERIVED
         + '\n{%- if MODE == "agenda" -%}\n' + AGENDA
         + '\n{%- else -%}' + GRID + '\n{%- endif -%}\n')
 
-SHARED = """{%- assign src = google_calendar_12345 -%}
+SHARED = """{%- assign src = @NODE@ -%}
 
 {%- comment -%} ---- colours: overridden by the plugin's custom fields ---- {%- endcomment -%}
 {%- assign CAL_MAP_DEFAULT = "you@gmail.com=black,work@example.com=red,shared@group.calendar.google.com=yellow" -%}
@@ -109,7 +115,7 @@ KNOBS = """{%- comment -%} ---- this layout ---- {%- endcomment -%}
 def render(view):
     (days, panel, axis, panel_h, head_h, title_h, hmax, every,
      legend, indent) = LAYOUTS[view]
-    subs = {'@VIEW@': view, '@DAYS@': days, '@PANEL@': panel, '@AXIS@': axis,
+    subs = {'@NODE@': NODE, '@VIEW@': view, '@DAYS@': days, '@PANEL@': panel, '@AXIS@': axis,
             '@PANELH@': panel_h, '@HEADH@': head_h,
             '@HMAX@': hmax, '@EVERY@': every,
             '@LEGEND@': legend,
