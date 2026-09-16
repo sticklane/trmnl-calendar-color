@@ -15,7 +15,7 @@ dark_mode: 'no'
 framework_version: latest
 name: Calendar Color
 description: Calendar events by source color
-refresh_interval: 900
+refresh_interval: 15
 
 # Custom fields. On usetrmnl.com these render as the plugin's own
 # settings form; trmnlp only forwards a value from .trmnlp.yml's
