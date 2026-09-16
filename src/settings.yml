@@ -1,13 +1,13 @@
-#
-# On usetrmnl.com this plugin runs with strategy "Plugin Merge", which
-# trmnlp models no strategy for. "polling" with an empty URL is the inert
-# local stand-in: it polls nothing, so the preview renders entirely from
-# the `variables:` fixture in .trmnlp.yml. Publish by pasting src/*.liquid
-# into the site's markup tabs — see README. Do not `trmnlp push` this file:
-# it would create a polling plugin, not a Plugin Merge one.
+# Plugin configuration, uploaded by `trmnlp push` and shown on the
+# plugin's settings page. The strategy is Plugin Merge: the plugin reads
+# the native Google Calendar instance's merge variable and polls nothing.
+# trmnlp's local preview ignores the strategy and renders from the
+# `variables:` fixture in .trmnlp.yml. The TRMNL importer accepts
+# `plugin_merge` here even though its documentation lists only polling,
+# webhook and static (verified 2026-09-12 with a throwaway import).
 #
 ---
-strategy: polling
+strategy: plugin_merge
 polling_verb: get
 polling_url: ''
 no_screen_padding: 'no'

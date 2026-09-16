@@ -28,12 +28,16 @@ plugin's `cal_map` custom field on usetrmnl.com, not in markup at all —
 which is the point of that field. Never write one into this repo, and
 never print one into a transcript.
 
-## Deploy is paste, not push
+## Deploy is `trmnlp push` with the node filled in
 
-`trmnlp push` uploads `src/settings.yml`, whose `strategy` this repo sets
-to a placeholder because trmnlp has no Plugin Merge strategy. Pushing
-would replace the Plugin Merge plugin with a polling one. Deploy by
-pasting each `src/*.liquid` into its markup tab on the site.
+`src/settings.yml` says `strategy: plugin_merge`, which the TRMNL
+importer accepts, so `bin/trmnlp push --id <plugin id>` keeps the
+plugin a Plugin Merge one. The tree always carries the placeholder node
+`google_calendar_12345`; `NODE=google_calendar_<id> python3
+scripts/gen_layouts.py` writes the real one for a push, and
+`scripts/check.sh` fails until the placeholder is back. Never commit a
+real node, a plugin id, or an API key; the CLI keeps the key in
+`~/.config/trmnlp/config.yml`.
 
 ## Colour tokens are the device's four inks
 

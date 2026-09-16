@@ -3,9 +3,3 @@ _build/
 
 # Reference renders carry real event titles off the linked calendars.
 reference/**/*.png
-
-# Account-specific deploy settings: plugin ids and the merge-variable node.
-deploy.env
-
-# deploy.sh working archives
-_deploy/

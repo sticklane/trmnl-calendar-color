@@ -73,10 +73,9 @@ covers three mapped calendars, an all-day event, and one unmapped
 calendar so the `FALLBACK` token cycle gets exercised. Rename the fixture
 key and the `assign src = ...` line together.
 
-`strategy: polling` with an empty `polling_url` is an inert placeholder
-that keeps the local renderer happy. **Do not `trmnlp push`** — that
-would create a polling plugin on the server, not a Plugin Merge one.
-Deploy by pasting each `src/*.liquid` into its markup tab, per Setup above.
+`src/settings.yml` declares `strategy: plugin_merge`; the local renderer
+ignores the strategy and reads the fixture. Deploy with `trmnlp push`,
+per "Deploying to usetrmnl.com" below.
 
 ## Settings (on the plugin's page, not in the markup)
 
@@ -121,25 +120,37 @@ minutes.
 
 ## Deploying to usetrmnl.com
 
-Deploy is an archive upload, the same endpoint the official `trmnlp`
-CLI uses, done by `scripts/deploy.sh` so the server's own settings stay
-the truth (`trmnlp push` would replace them with this repo's placeholder
-`settings.yml`).
+Deploy with the official `trmnlp` CLI (usetrmnl/trmnlp), the same tool
+`scripts/check.sh` uses for lint and build; `bin/trmnlp` runs it from
+its Docker image when the gem is not installed.
 
-1. Copy `deploy.env.example` to `deploy.env` and fill in your plugin ids
-   and your merge-variable node (`google_calendar_<id>` under "Merge
-   Variables" on the plugin page). The file is untracked.
-2. Get an API key from https://trmnl.com/account and export it:
-   `export TRMNL_API_KEY=user_...`. Never write it into the repo.
-3. `scripts/deploy.sh`. It runs `scripts/check.sh`, downloads each
-   plugin's archive, replaces the four layouts with the built ones, and
-   uploads. `--dry-run` builds the archives under `_deploy/` without
-   touching the server; `--skip-check` skips the gate.
-4. Press "Force Refresh" on each plugin's settings page to see the
-   render.
+1. `bin/trmnlp login` once, with the API key from https://trmnl.com/account.
+   The CLI keeps it in `~/.config/trmnlp/config.yml`; nothing in this
+   repo ever holds it.
+2. Write your merge-variable node into the layouts. It is
+   `google_calendar_<id>` under "Merge Variables" on the plugin page:
 
-The plugin's own settings (colour maps, view, agenda calendars) are
-edited on the plugin page and are not part of a deploy.
+       NODE=google_calendar_<id> python3 scripts/gen_layouts.py
+
+3. Push to each plugin built from this markup, by the id in its
+   settings-page URL (the grid instance and, if you use it, the agenda
+   instance):
+
+       bin/trmnlp push --id <plugin id>
+
+   The CLI asks before overwriting; `--force` skips the prompt.
+4. Put the placeholder back so the tree stays free of your node:
+   `python3 scripts/gen_layouts.py` (or `git checkout src/`).
+   `scripts/check.sh` fails while a real node is in `src/`.
+5. Press "Force Refresh" on each plugin's settings page.
+
+`src/settings.yml` declares `strategy: plugin_merge`, which the TRMNL
+importer accepts even though its documentation lists only polling,
+webhook and static; a push therefore keeps the plugin a Plugin Merge
+one. The plugin's own field values (colour maps, view, agenda
+calendars) live on the plugin page. Check them after the first push
+and re-enter them if the upload reset them; the CLI's archive endpoint
+is documented as an overwrite.
 
 ## Gotchas
 
