@@ -1,0 +1,32 @@
+# Deploys the plugin to TRMNL with trmnlp, the flow TRMNL's "Develop on
+# GitHub" panel describes. Needs the repository secret TRMNL_API_KEY.
+# Plugin ids and merge nodes come from repository variables/secrets, never
+# from the tree. Concurrency, path filters and the timeout keep billed
+# runner minutes down.
+name: Deploy to TRMNL
+on:
+  workflow_dispatch:
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0.6'
+      - run: gem install trmnl_preview
+      # Manual only until a push is verified to keep the plugins' custom
+      # field values (cal_map etc.); secrets so the public logs mask them.
+      - run: NODE="$MERGE_NODE" python3 scripts/gen_layouts.py
+        env:
+          MERGE_NODE: ${{ secrets.MERGE_NODE }}
+      - run: trmnlp lint
+      - run: for id in $PLUGIN_IDS; do trmnlp push --force --id "$id"; done
+        env:
+          TRMNL_API_KEY: ${{ secrets.TRMNL_API_KEY }}
+          PLUGIN_IDS: ${{ secrets.PLUGIN_IDS }}
